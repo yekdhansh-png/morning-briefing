@@ -32,12 +32,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
       - name: Generate today's briefing
+        # 生成器内部会调用 npx 拉取 westock 数据，需要 Node 先就位
         run: python scripts/generate_briefing.py
 
       - name: Commit updated briefing.json
@@ -47,12 +54,6 @@ jobs:
         with:
           commit_message: "chore(briefing): daily update"
           file_pattern: public/briefing.json
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
 
       - name: Install deps
         run: npm ci

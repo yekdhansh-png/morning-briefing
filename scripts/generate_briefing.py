@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 """
-晨光股市早报 - 数据生成器（Step 2.1: 接入隔夜外盘真实行情）
+晨光股市早报 - 数据生成器（Step 2.1: 接入隔夜外盘真实行情 - westock 版）
 
-- 更新 hero.subTitle 为今天的北京时间日期
-- 拉取 6 个外盘标的的最新行情（Stooq 免费 CSV 接口，无需 API Key）
-  - 纳斯达克 ^NDQ / 标普500 ^SPX / 道琼斯 ^DJI
-  - COMEX金 GC.F / COMEX银 SI.F / WTI原油 CL.F
-- 拉失败时保留旧值 + 标记 stale，不阻塞构建
+数据源：腾讯自选股（westock-data-clawhub）
+- 美股三大指数：纳斯达克 usIXIC / 标普500 usINX / 道琼斯 usDJI
+- 大宗商品 ETF：黄金 ETF usGLD.AM / 白银 ETF usSLV.AM / 原油 ETF usUSO.AM
 
-后续阶段会接入更多模块（自选股、新闻、AI 解读）。
+涨跌幅 = (最新收盘 - 上一交易日收盘) / 上一交易日收盘 × 100%
 
-环境：纯 Python 3 标准库，无外部依赖。
+环境：Python 3.13 标准库 + 调用 westock CLI（npx）
+拉失败时保留旧值。
 """
 from __future__ import annotations
 
 import json
+import re
+import subprocess
 import sys
-import urllib.request
-import urllib.error
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -27,22 +26,22 @@ BRIEFING_PATH = ROOT / "public" / "briefing.json"
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 TRADING_WEEKDAYS = {0, 1, 2, 3, 4}
 
-# 外盘 6 标的 - Stooq symbol 与展示名映射
+# 外盘 6 标的：(westock symbol, 展示名)
 GLOBAL_SYMBOLS = [
-    ("^NDQ", "纳斯达克"),
-    ("^SPX", "标普500"),
-    ("^DJI", "道琼斯"),
-    ("GC.F", "COMEX金"),
-    ("SI.F", "COMEX银"),
-    ("CL.F", "WTI原油"),
+    ("usIXIC", "纳斯达克"),
+    ("usINX", "标普500"),
+    ("usDJI", "道琼斯"),
+    ("usGLD.AM", "黄金 ETF"),
+    ("usSLV.AM", "白银 ETF"),
+    ("usUSO.AM", "原油 ETF"),
 ]
-STOOQ_TIMEOUT = 8  # 秒
+WESTOCK_PKG = "westock-data-clawhub@1.0.4"
+WESTOCK_TIMEOUT = 60  # 秒
 
 
 # ---------- 工具函数 ----------
 
 def today_subtitle() -> tuple[str, datetime]:
-    """生成形如 '2026/05/19 · 星期二 · 盘前必读' 的副标题"""
     now = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=8)))
     weekday = WEEKDAY_CN[now.weekday()]
     subtitle = f"{now.strftime('%Y/%m/%d')} · 星期{weekday} · 盘前必读"
@@ -64,52 +63,91 @@ def save_briefing(data: dict) -> None:
         f.write("\n")
 
 
-def http_get(url: str, timeout: int = STOOQ_TIMEOUT) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read().decode("utf-8", errors="replace").strip()
+# ---------- westock 调用 ----------
+
+def call_westock(args: list[str]) -> str:
+    """调用 westock CLI，返回 stdout"""
+    cmd = ["npx", "-y", WESTOCK_PKG, *args]
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=WESTOCK_TIMEOUT,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"westock failed: {result.stderr or result.stdout}")
+    return result.stdout
 
 
-# ---------- 外盘数据拉取 ----------
-
-def fetch_one_index(stooq_sym: str) -> dict | None:
+def parse_kline_table(text: str) -> list[dict]:
     """
-    从 Stooq 拉单个标的；返回 {value, change, up} 或 None
-    Stooq CSV 格式：Symbol,Date,Open,High,Low,Close,Volume
-    涨跌按 (close - open) / open 计算（盘中相对开盘）
+    解析 westock kline 输出的 markdown 表格
+    返回 [{date, open, last, high, low, ...}, ...]
     """
-    url = f"https://stooq.com/q/l/?s={stooq_sym}&f=sd2ohlcv&h&e=csv"
+    rows: list[dict] = []
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip().startswith("|")]
+    if len(lines) < 3:
+        return rows
+    # 第 1 行是表头，第 2 行是 ---
+    header = [c.strip() for c in lines[0].strip("|").split("|")]
+    for ln in lines[2:]:
+        cells = [c.strip() for c in ln.strip("|").split("|")]
+        if len(cells) != len(header):
+            continue
+        row = dict(zip(header, cells))
+        rows.append(row)
+    return rows
+
+
+def fetch_one_index(westock_sym: str) -> dict | None:
+    """
+    返回 {value, change, up} 或 None
+    用最近 5 天 K 线，去掉占位行（westock 当天未开盘时会用昨日数据填占位行），
+    然后拿最新行 vs 上一交易日行算涨跌幅
+    """
     try:
-        text = http_get(url)
-    except (urllib.error.URLError, TimeoutError) as e:
-        print(f"  [WARN] {stooq_sym} 网络错误: {e}", file=sys.stderr)
+        out = call_westock(["kline", westock_sym, "--period", "day", "--limit", "5"])
+    except (RuntimeError, subprocess.TimeoutExpired) as e:
+        print(f"  [WARN] {westock_sym} 调用失败: {e}", file=sys.stderr)
         return None
 
-    lines = [ln for ln in text.splitlines() if ln.strip()]
-    if len(lines) < 2:
+    if "未找到" in out or "未找到该股票" in out:
         return None
-    fields = lines[1].split(",")
-    if len(fields) < 6 or fields[2] in ("N/D", ""):
+
+    rows = parse_kline_table(out)
+    if len(rows) < 2:
+        return None
+
+    # 按 (open, last) 去重，相邻两行完全相同视为占位重复
+    deduped: list[dict] = []
+    seen = set()
+    for r in rows:
+        key = (r.get("open"), r.get("last"), r.get("high"), r.get("low"))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(r)
+    if len(deduped) < 2:
         return None
 
     try:
-        op = float(fields[2])
-        close = float(fields[5])
-    except (ValueError, IndexError):
-        return None
-    if op == 0:
+        latest_close = float(deduped[0]["last"])
+        prev_close = float(deduped[1]["last"])
+    except (ValueError, KeyError):
         return None
 
-    pct = (close - op) / op * 100
+    if prev_close == 0:
+        return None
+
+    pct = (latest_close - prev_close) / prev_close * 100
     up = pct >= 0
 
-    # 大数字千分位 + 小数控制
-    if close >= 1000:
-        value_str = f"{close:,.2f}"
-    elif close >= 100:
-        value_str = f"{close:,.2f}"
+    if latest_close >= 1000:
+        value_str = f"{latest_close:,.2f}"
+    elif latest_close >= 100:
+        value_str = f"{latest_close:,.2f}"
     else:
-        value_str = f"{close:.2f}"
+        value_str = f"{latest_close:.2f}"
 
     sign = "+" if up else ""
     change_str = f"{sign}{pct:.2f}%"
@@ -118,10 +156,6 @@ def fetch_one_index(stooq_sym: str) -> dict | None:
 
 
 def fetch_global_indices(prev: list[dict]) -> tuple[list[dict], int]:
-    """
-    返回 (新数据, 拉取成功数量)
-    任何一个失败时使用 prev 里的旧值
-    """
     new_list: list[dict] = []
     ok_count = 0
     prev_by_name = {p["name"]: p for p in prev}
@@ -131,14 +165,29 @@ def fetch_global_indices(prev: list[dict]) -> tuple[list[dict], int]:
         if fetched:
             ok_count += 1
             new_list.append({"name": name, **fetched})
-            print(f"  [OK] {name:10s} {fetched['value']:>10s} ({fetched['change']})")
+            print(f"  [OK]    {name:10s} {fetched['value']:>10s} ({fetched['change']})")
         else:
-            old = prev_by_name.get(name, {"name": name, "value": "—", "change": "—", "up": False})
-            new_list.append({"name": name, "value": old.get("value", "—"),
-                              "change": old.get("change", "—"), "up": old.get("up", False)})
+            old = prev_by_name.get(name) or prev_by_name.get(_legacy_name(name)) or {
+                "name": name, "value": "—", "change": "—", "up": False
+            }
+            new_list.append({
+                "name": name,
+                "value": old.get("value", "—"),
+                "change": old.get("change", "—"),
+                "up": old.get("up", False),
+            })
             print(f"  [STALE] {name:10s} 使用上次值")
 
     return new_list, ok_count
+
+
+def _legacy_name(name: str) -> str:
+    """兼容上版的展示名"""
+    return {
+        "黄金 ETF": "COMEX金",
+        "白银 ETF": "COMEX银",
+        "原油 ETF": "WTI原油",
+    }.get(name, name)
 
 
 # ---------- 主流程 ----------
@@ -157,7 +206,7 @@ def main() -> int:
     print(f"  hero.subTitle: {old_subtitle!r} -> {subtitle!r}")
 
     # 2. 拉外盘
-    print("[Step 2.1] 拉取外盘 6 宫格...")
+    print("[Step 2.1] 拉取外盘 6 宫格 (westock)...")
     prev_indices = data.get("globalIndices", [])
     new_indices, ok = fetch_global_indices(prev_indices)
     data["globalIndices"] = new_indices
