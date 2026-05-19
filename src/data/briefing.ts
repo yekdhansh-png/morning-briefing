@@ -1,0 +1,312 @@
+// 早报数据：类型 + 默认 fallback + 运行时加载
+
+export interface StatItem {
+  label: string;
+  value: string;
+}
+
+export interface AIDetail {
+  tag: string;        // chip 标签，如 "驱动因素"
+  content: string;
+}
+
+export interface StockItem {
+  name: string;
+  code: string;
+  price: string;
+  changePct: string;   // 形如 "-3.83%" 不含箭头，由前端判断方向
+  isUp: boolean;       // true 涨（红/▲）/ false 跌（绿/▼）
+  status: '涨停异动' | '重要新闻' | '新增风险';
+  desc: string;
+  stats: StatItem[];
+  ai: string;
+  aiDetails?: AIDetail[]; // 展开后的详细解读
+}
+
+export interface GlobalIndex {
+  name: string;
+  value: string;
+  change: string;
+  up: boolean;
+}
+
+export interface SignalDetail {
+  tag: string;
+  content: string;
+}
+
+export interface NewsItem {
+  no: '01' | '02' | '03';
+  title: string;
+  signal: string;
+  signalDetails?: SignalDetail[];
+  affectedIcon: string;    // emoji 或文本
+  affectedName: string;    // 板块名，如 "出口链"
+  affectedDirection: '正面' | '负面';
+  strength: '强' | '中' | '弱';
+}
+
+export interface IPOItem {
+  name: string;
+  code: string;
+  board: '创业板' | '科创板';
+  boardColor: 'green' | 'blue';
+  price: string;
+  industry: string;
+  estProfit: string;       // 预估收益 ¥18,500
+  estPct: string;          // (+48%)
+  highlight: string;
+}
+
+export interface CatalystStock {
+  name: string;
+  desc: string;
+}
+
+export interface CatalystItem {
+  sector: string;
+  title: '机构热评' | '市场热议';
+  content: string;
+  stocks: CatalystStock[];
+}
+
+export interface HeroData {
+  brand: string;
+  bigTitle: string;
+  subTitle: string;
+  tempValue: number;
+  tempLabel: string;
+  tempStatus: string;
+  paragraph: string;
+}
+
+export interface CustomPlan {
+  watchlist: string;
+  sectors: string;
+  riskPref: string;
+  pushTime: string;
+}
+
+export interface BriefingData {
+  hero: HeroData;
+  stocks: StockItem[];
+  globalIndices: GlobalIndex[];
+  globalSummary: string;
+  news: NewsItem[];
+  ipo: {
+    list: IPOItem[];
+    footerNote: string;
+    btnText: string;
+  };
+  catalyst: CatalystItem[];
+  disclaimer: string;
+  generatedBy: string;
+  customPlan: CustomPlan;
+}
+
+// 默认 mock 数据（fallback）
+export const defaultBriefing: BriefingData = {
+  hero: {
+    brand: 'MORNING BRIEFING',
+    bigTitle: '每日有料',
+    subTitle: '2026/05/19 · 星期二 · 盘前必读',
+    tempValue: 78,
+    tempLabel: '市场温度',
+    tempStatus: '火热',
+    paragraph:
+      '外部环境缓和叠加 AI 产业落地与贵金属共振新高，A 股风险偏好显著抬升，今日大概率高开高走。资金有望沿科技与有色双主线扩散，权重搭台、题材唱戏的格局可期，但需警惕高位品种盘中冲高回落与情绪过热分化。',
+  },
+  stocks: [
+    {
+      name: '中际旭创',
+      code: '300308',
+      price: '1005.00',
+      changePct: '-3.83%',
+      isUp: false,
+      status: '涨停异动',
+      desc: '中际旭创昨日强势涨停，封单金额超 12 亿元，成交额达 96 亿元，创近 2 个月新高，市场情绪高涨。',
+      stats: [
+        { label: '成交额', value: '96亿' },
+        { label: '换手率', value: '5.21%' },
+      ],
+      ai: '英伟达 GTC 利好兑现叠加 1.6T 光模块需求确认，北向资金大幅加仓，上涨逻辑扎实。',
+      aiDetails: [
+        { tag: '驱动因素', content: '英伟达 GTC 大会确认 GB300 平台 1.6T 光模块用量翻倍至 144 个/机柜，作为全球光模块龙头直接受益于行业 α。' },
+        { tag: '资金面', content: '北向资金近 5 日累计净买入 8.2 亿，机构席位昨日上榜净买入 4.8 亿，主力筹码集中度持续提升。' },
+        { tag: '关注点', content: '后续需跟踪海外大客户三季报指引、1.6T 实际出货节奏；当前估值已隐含较高预期，警惕高位放量后的短期波动。' },
+      ],
+    },
+    {
+      name: '紫金矿业',
+      code: '601899',
+      price: '30.90',
+      changePct: '-1.28%',
+      isUp: false,
+      status: '重要新闻',
+      desc: '紫金矿业披露业绩预告：前三季度归母净利润预增 50%-55%，量价齐升兑现，叠加 LME 铜价创 5 个月新高。',
+      stats: [
+        { label: '行业', value: '有色' },
+        { label: 'PE', value: '15.2' },
+      ],
+      ai: '铜金双主业全球矿企，业绩超市场预期，估值处历史中位偏下，安全边际充足。',
+      aiDetails: [
+        { tag: '驱动因素', content: '铜价突破 9,485 美元/吨叠加金价创历史新高，公司单吨毛利同步抬升，业绩弹性最强。' },
+        { tag: '资金面', content: '北向连续 3 日加仓，机构调研密度回升，主力资金净流入维持高位。' },
+        { tag: '关注点', content: '关注美元指数与全球矿端供给扰动；当前估值仍处中位偏下，建议中长期持有。' },
+      ],
+    },
+    {
+      name: '比亚迪',
+      code: '002594',
+      price: '95.00',
+      changePct: '+0.52%',
+      isUp: true,
+      status: '新增风险',
+      desc: '该股短期价格线下行于中长期均线，形成空头排列，技术面显示下行压力持续加大。',
+      stats: [
+        { label: '行业', value: '汽车' },
+        { label: 'PE', value: '21.6' },
+      ],
+      ai: '均线空头排列是趋势走弱的经典信号，短期内建议谨慎持仓，等待趋势明朗。',
+      aiDetails: [
+        { tag: '驱动因素', content: '欧洲销量同环比下滑叠加国内 10 月排产略低于预期，市场对销量目标修复路径出现分歧。' },
+        { tag: '资金面', content: '北向连续 4 日净卖出，融资余额回落，短线资金避险情绪上行。' },
+        { tag: '关注点', content: '等待 11 月销量数据 + 智驾平权放量节奏；若放量则趋势有望反转，否则维持谨慎。' },
+      ],
+    },
+  ],
+  globalIndices: [
+    { name: '纳斯达克', value: '26,090.73', change: '-0.51%', up: false },
+    { name: '标普500', value: '7,403.05', change: '-0.07%', up: false },
+    { name: '道琼斯', value: '49,686.12', change: '+0.32%', up: true },
+    { name: 'COMEX金', value: '2,725', change: '+0.69%', up: true },
+    { name: 'COMEX银', value: '32.85', change: '+1.45%', up: true },
+    { name: 'WTI原油', value: '69.85', change: '-1.76%', up: false },
+  ],
+  globalSummary:
+    '全球呈现"股强、贵金属强、原油弱"的组合。美股 AI 链领涨叠加美联储降息预期升温，金铜共振走强，对 A 股风险偏好与有色、AI 算力板块构成正向映射，石化短期承压。',
+  news: [
+    {
+      no: '01',
+      title:
+        '中美经贸磋商释放积极信号，双方原则同意对等降税并推进农产品市场准入，外贸链情绪迎修复窗口。',
+      signal:
+        '关税扰动转向缓和后，前期受压的出口敏感品种估值压制有望解除，资金面或重新流入低位顺周期方向。',
+      signalDetails: [
+        { tag: '关税路径', content: '"对等降税"释放磋商务实信号，年内进一步存存在空间。' },
+        { tag: '受益方向', content: '机电出口、家电、汽车零部件、跨境电商等敏感品种弹性最大。' },
+        { tag: '农产品端', content: '大豆、玉米、肉类等市场准入若打开，将利好港口、粮油加工。' },
+      ],
+      affectedIcon: '🚢',
+      affectedName: '出口链',
+      affectedDirection: '正面',
+      strength: '强',
+    },
+    {
+      no: '02',
+      title:
+        '三大运营商同步开卖"Token 算力套餐"，"算力网"概念全网刷屏，国产算力商业化路径加速明朗。',
+      signal:
+        '推理算力首次实现"按 Token 计费"标准化售卖，意味着 AI 算力进入持续稳定的 ToB 现金流阶段。',
+      signalDetails: [
+        { tag: '商业模式', content: 'Token 套餐对标公有云推理，单价透明 + 月度续费，构筑可预测的 ARR。' },
+        { tag: '受益方向', content: '光模块、液冷、IDC、运营商算力子公司均有边际改善空间。' },
+        { tag: '风险提示', content: '需关注实际 Token 消耗量爬坡进度，避免高估短期商业化节奏。' },
+      ],
+      affectedIcon: '💡',
+      affectedName: '光通信',
+      affectedDirection: '正面',
+      strength: '强',
+    },
+    {
+      no: '03',
+      title:
+        'SpaceX 拟 6/12 登陆纳斯达克，估值约 1.75 万亿美元，史诗级 IPO 重塑全球商业航天估值锚。',
+      signal:
+        '海外稀缺标的的上市将带动 A/H 商业航天板块比价效应，主题资金或提前进行映射性配置。',
+      signalDetails: [
+        { tag: '估值锚效应', content: '1.75 万亿美元估值将抬升 A/H 商业航天 PS 中枢。' },
+        { tag: '受益方向', content: '卫星制造、火箭发射、卫星互联网应用三大方向比价空间最大。' },
+        { tag: '节奏判断', content: '主题资金通常在路演与首日定价前 2-4 周提前布局，关注 5 月底-6 月初窗口。' },
+      ],
+      affectedIcon: '🚀',
+      affectedName: '商业航天',
+      affectedDirection: '正面',
+      strength: '中',
+    },
+  ],
+  ipo: {
+    list: [
+      {
+        name: '智算光电',
+        code: '301888',
+        board: '创业板',
+        boardColor: 'green',
+        price: '¥38.88',
+        industry: '光通信',
+        estProfit: '¥18,500',
+        estPct: '(+48%)',
+        highlight: '光模块行业景气延续，发行 PE 显著低于行业可比公司。',
+      },
+      {
+        name: '海芯半导',
+        code: '688999',
+        board: '科创板',
+        boardColor: 'blue',
+        price: '¥65.2',
+        industry: '半导体设备',
+        estProfit: '¥13,200',
+        estPct: '(+20%)',
+        highlight: '国产替代核心标的，绑定中芯国际，技术壁垒较高。',
+      },
+    ],
+    footerNote: '近 6 个月无新股破发 · 首日平均涨幅 248.90%',
+    btnText: '🔔 一键申购全部新股（2 只）  →',
+  },
+  catalyst: [
+    {
+      sector: 'AI 算力',
+      title: '机构热评',
+      content:
+        '黄仁勋 GTC 发布 GB300 及 Rubin 路线图，1.6T 光模块用量翻倍至 144 个，液冷成标配。',
+      stocks: [
+        { name: '中际旭创', desc: '全球光模块龙头，1.6T 产品率先量产，份额持续提升。' },
+        { name: '英维克', desc: '液冷温控核心供应商，深度绑定头部互联网客户。' },
+      ],
+    },
+    {
+      sector: '有色',
+      title: '市场热议',
+      content:
+        'LME 铜报 9,485 美元/吨创 5 月新高；COMEX 金 2,725 美元再创历史新高，美元指数跌破 106。',
+      stocks: [
+        { name: '紫金矿业', desc: '铜金双主业全球矿企，量价齐升业绩弹性大。' },
+        { name: '山东黄金', desc: 'A 股黄金龙头，金价新高直接受益弹性最强。' },
+      ],
+    },
+  ],
+  disclaimer: '市场有风险，投资需谨慎 · 本文不构成投资建议',
+  generatedBy: '由 With 通过自然语言生成',
+  customPlan: {
+    watchlist: '中际旭创 · 紫金矿业 · 比亚迪',
+    sectors: 'AI 算力 · 有色金属',
+    riskPref: '稳健型',
+    pushTime: '07:30 每日推送',
+  },
+};
+
+/**
+ * 运行时加载 briefing.json
+ */
+export async function loadBriefing(): Promise<BriefingData> {
+  const url = `${import.meta.env.BASE_URL}briefing.json`;
+  try {
+    const res = await fetch(url, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as BriefingData;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[briefing] 加载失败，使用 fallback:', err);
+    return defaultBriefing;
+  }
+}
