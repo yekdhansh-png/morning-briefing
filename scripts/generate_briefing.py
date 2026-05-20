@@ -22,6 +22,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BRIEFING_PATH = ROOT / "public" / "briefing.json"
+NEWS_ARCHIVE_DIR = ROOT / "data" / "news-archive"
+
+# 让本目录下的 news_cls / news_wscn 模块可被 import
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from news_cls import fetch_cls_briefing
+    from news_wscn import fetch_wscn_breakfast
+except ImportError as _e:
+    print(f"[ERROR] 加载新闻抓取模块失败: {_e}", file=sys.stderr)
+
+    def fetch_cls_briefing():  # type: ignore
+        return [], None
+
+    def fetch_wscn_breakfast():  # type: ignore
+        return [], None
 
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 TRADING_WEEKDAYS = {0, 1, 2, 3, 4}
@@ -190,6 +205,60 @@ def _legacy_name(name: str) -> str:
     }.get(name, name)
 
 
+# ---------- 新闻抓取（双源：财联社 + 华尔街见闻） ----------
+
+def fetch_news_candidates() -> list[dict]:
+    """
+    抓取财联社早报 + 华尔街见闻早餐，合并成备选新闻池。
+    华尔街见闻经常被反爬，失败时只用财联社。
+    去重策略：相同 title 前 30 字保留先出现的。
+    """
+    all_items: list[dict] = []
+
+    # 财联社（必跑）
+    try:
+        cls_items, cls_url = fetch_cls_briefing()
+        print(f"  [新闻] 财联社早报 {len(cls_items)} 条 ({cls_url})")
+        all_items.extend(cls_items)
+    except Exception as e:
+        print(f"  [新闻] 财联社抓取异常: {e}", file=sys.stderr)
+
+    # 华尔街见闻（可选）
+    try:
+        wscn_items, wscn_url = fetch_wscn_breakfast()
+        print(f"  [新闻] 华尔街见闻早餐 {len(wscn_items)} 条 ({wscn_url})")
+        all_items.extend(wscn_items)
+    except Exception as e:
+        print(f"  [新闻] 华尔街见闻抓取异常: {e}", file=sys.stderr)
+
+    # 去重
+    seen = set()
+    deduped: list[dict] = []
+    for it in all_items:
+        key = (it.get("title") or "")[:30]
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(it)
+
+    return deduped
+
+
+def archive_news_candidates(items: list[dict], now: datetime) -> None:
+    """每日存档，便于复盘"""
+    if not items:
+        return
+    NEWS_ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    fname = NEWS_ARCHIVE_DIR / f"{now.strftime('%Y-%m-%d')}.json"
+    with fname.open("w", encoding="utf-8") as f:
+        json.dump({
+            "fetched_at": now.isoformat(),
+            "count": len(items),
+            "items": items,
+        }, f, ensure_ascii=False, indent=2)
+    print(f"  [新闻] 已存档 {fname.relative_to(ROOT)}")
+
+
 # ---------- 主流程 ----------
 
 def main() -> int:
@@ -212,7 +281,15 @@ def main() -> int:
     data["globalIndices"] = new_indices
     print(f"  外盘 {ok}/{len(GLOBAL_SYMBOLS)} 拉取成功")
 
-    # 3. 写回
+    # 3. 拉新闻备选池（双源：财联社早报 + 华尔街见闻早餐）
+    print("[Step 2.2] 拉取新闻备选池...")
+    candidates = fetch_news_candidates()
+    archive_news_candidates(candidates, now)
+    print(f"  备选新闻共 {len(candidates)} 条 (已存档，前端不读)")
+    # 备选池仅落到 data/news-archive/，不写入 briefing.json，
+    # 等下一步 LLM 选 TOP 3 + 解读后再写入 briefing.json["news"]
+
+    # 4. 写回
     save_briefing(data)
     print(f"[done] 已写入 {BRIEFING_PATH.relative_to(ROOT)}")
     return 0

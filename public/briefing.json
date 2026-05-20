@@ -2,7 +2,7 @@
   "hero": {
     "brand": "MORNING BRIEFING",
     "bigTitle": "每日有料",
-    "subTitle": "2026/05/19 · 星期二 · 盘前必读",
+    "subTitle": "2026/05/20 · 星期三 · 盘前必读",
     "tempValue": 78,
     "tempLabel": "市场温度",
     "tempStatus": "火热",
@@ -115,38 +115,38 @@
   "globalIndices": [
     {
       "name": "纳斯达克",
-      "value": "26,090.73",
-      "change": "-0.51%",
+      "value": "25,870.71",
+      "change": "-0.84%",
       "up": false
     },
     {
       "name": "标普500",
-      "value": "7,403.05",
-      "change": "-0.07%",
+      "value": "7,353.61",
+      "change": "-0.67%",
       "up": false
     },
     {
       "name": "道琼斯",
-      "value": "49,686.12",
-      "change": "+0.32%",
-      "up": true
+      "value": "49,363.88",
+      "change": "-0.65%",
+      "up": false
     },
     {
       "name": "黄金 ETF",
-      "value": "418.43",
-      "change": "+0.27%",
-      "up": true
+      "value": "411.50",
+      "change": "-1.66%",
+      "up": false
     },
     {
       "name": "白银 ETF",
-      "value": "69.94",
-      "change": "+1.30%",
-      "up": true
+      "value": "66.90",
+      "change": "-4.35%",
+      "up": false
     },
     {
       "name": "原油 ETF",
-      "value": "149.29",
-      "change": "+0.72%",
+      "value": "152.96",
+      "change": "+2.46%",
       "up": true
     }
   ],
