@@ -132,22 +132,22 @@
       "up": false
     },
     {
-      "name": "黄金 ETF",
-      "value": "411.50",
-      "change": "-1.66%",
-      "up": false
-    },
-    {
-      "name": "白银 ETF",
-      "value": "66.90",
-      "change": "-4.35%",
-      "up": false
-    },
-    {
-      "name": "原油 ETF",
-      "value": "152.96",
-      "change": "+2.46%",
+      "name": "COMEX 黄金",
+      "value": "4,491.40",
+      "change": "+0.14%",
       "up": true
+    },
+    {
+      "name": "COMEX 白银",
+      "value": "75.72",
+      "change": "+2.38%",
+      "up": true
+    },
+    {
+      "name": "WTI 原油",
+      "value": "102.14",
+      "change": "-1.82%",
+      "up": false
     }
   ],
   "globalSummary": "全球呈现\"股强、贵金属强、原油弱\"的组合。美股 AI 链领涨叠加美联储降息预期升温，金铜共振走强，对 A 股风险偏好与有色、AI 算力板块构成正向映射，石化短期承压。",
