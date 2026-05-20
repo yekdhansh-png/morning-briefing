@@ -47,14 +47,14 @@ export default function GlobalMarketCard() {
           return (
             <div
               key={g.name}
-              className="rounded-xl px-2.5 py-2.5"
+              className="rounded-xl px-2.5 py-2.5 flex flex-col items-center text-center"
               style={{
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.07)',
               }}
             >
               {/* 标的名 */}
-              <div className="text-[11px] text-white/60 font-medium mb-1.5 truncate">
+              <div className="text-[11px] text-white/60 font-medium mb-1.5 truncate max-w-full">
                 {g.name}
               </div>
               {/* 数值 */}
