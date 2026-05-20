@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 try:
     from news_cls import fetch_cls_briefing
     from news_wscn import fetch_wscn_breakfast
+    from news_stcn import fetch_stcn_briefing
 except ImportError as _e:
     print(f"[ERROR] 加载新闻抓取模块失败: {_e}", file=sys.stderr)
 
@@ -36,6 +37,9 @@ except ImportError as _e:
         return [], None
 
     def fetch_wscn_breakfast():  # type: ignore
+        return [], None
+
+    def fetch_stcn_briefing():  # type: ignore
         return [], None
 
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
@@ -209,13 +213,13 @@ def _legacy_name(name: str) -> str:
 
 def fetch_news_candidates() -> list[dict]:
     """
-    抓取财联社早报 + 华尔街见闻早餐，合并成备选新闻池。
-    华尔街见闻经常被反爬，失败时只用财联社。
+    抓取三路新闻源：财联社早报 + 证券时报早知道 + 华尔街见闻早餐
+    华尔街见闻经常被反爬，失败时只用其他两路。
     去重策略：相同 title 前 30 字保留先出现的。
     """
     all_items: list[dict] = []
 
-    # 财联社（必跑）
+    # 财联社（必跑，最稳定）
     try:
         cls_items, cls_url = fetch_cls_briefing()
         print(f"  [新闻] 财联社早报 {len(cls_items)} 条 ({cls_url})")
@@ -223,7 +227,15 @@ def fetch_news_candidates() -> list[dict]:
     except Exception as e:
         print(f"  [新闻] 财联社抓取异常: {e}", file=sys.stderr)
 
-    # 华尔街见闻（可选）
+    # 证券时报（必跑）
+    try:
+        stcn_items, stcn_url = fetch_stcn_briefing()
+        print(f"  [新闻] 证券时报早知道 {len(stcn_items)} 条 ({stcn_url})")
+        all_items.extend(stcn_items)
+    except Exception as e:
+        print(f"  [新闻] 证券时报抓取异常: {e}", file=sys.stderr)
+
+    # 华尔街见闻（可选，反爬时跳过）
     try:
         wscn_items, wscn_url = fetch_wscn_breakfast()
         print(f"  [新闻] 华尔街见闻早餐 {len(wscn_items)} 条 ({wscn_url})")
