@@ -6,7 +6,8 @@ interface NewsCardProps {
 }
 
 function StrengthBar({ level }: { level: '强' | '中' | '弱' }) {
-  // 5 格虚线：弱=亮前 2 格 / 中=亮第 3 格 / 强=亮后 2 格
+  // 5 段虚线（用实心短线 + 间隙模拟，避免 border-dashed 自动重复变成 10 格）
+  // 弱=亮前 2 格 / 中=亮第 3 格 / 强=亮后 2 格
   const litMap: Record<string, number[]> = {
     弱: [0, 1],
     中: [2],
@@ -15,16 +16,15 @@ function StrengthBar({ level }: { level: '强' | '中' | '弱' }) {
   const lit = new Set(litMap[level]);
   return (
     <div className="flex items-center justify-end gap-1.5">
-      <div className="flex items-center gap-[3px]">
+      <div className="flex items-center gap-[5px]">
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
             style={{
-              width: 9,
-              height: 0,
-              borderTop: '2px dashed',
-              borderTopColor: lit.has(i) ? '#E54D42' : '#E5C9C7',
-              opacity: lit.has(i) ? 1 : 0.55,
+              width: 10,
+              height: 2,
+              borderRadius: 1,
+              background: lit.has(i) ? '#E54D42' : '#E5C9C7',
             }}
           />
         ))}
@@ -95,16 +95,20 @@ export default function NewsCard({ data }: NewsCardProps) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="w-full flex items-start p-3 text-left"
+          className="w-full p-3 text-left relative"
         >
-          <span className="text-[12.5px] font-bold mr-1.5 mt-[1px]" style={{ color: '#E54D42' }}>
-            核心信号
-          </span>
-          <span className="text-[12px] mt-[2px] mr-1.5" style={{ color: '#E54D42' }}>
-            ·
-          </span>
-          <p className="flex-1 text-[12.5px] leading-[1.7] text-[#5a2a26]">{signal}</p>
-          <span className="shrink-0 ml-2 mt-[2px]">
+          {/* 用纯文本流让第二行回到容器最左 */}
+          <p className="text-[12.5px] leading-[1.75] text-[#5a2a26] pr-6">
+            <span className="font-bold mr-1.5" style={{ color: '#E54D42' }}>
+              核心信号
+            </span>
+            <span className="mr-1.5" style={{ color: '#E54D42' }}>
+              ·
+            </span>
+            {signal}
+          </p>
+          {/* 箭头绝对定位到右上角 */}
+          <span className="absolute right-3 top-3">
             <ChevronDown rotated={expanded} />
           </span>
         </button>
@@ -150,13 +154,15 @@ export default function NewsCard({ data }: NewsCardProps) {
             </div>
           </div>
           <span
-            className="ml-2.5 inline-flex items-center text-[11px] px-2 h-[20px] rounded-full font-bold leading-none"
+            className="ml-2.5 inline-flex items-center justify-center text-[11.5px] px-2.5 rounded-full font-bold"
             style={{
               background: directionPositive ? '#E54D42' : '#1FAE6F',
               color: '#fff',
+              height: 22,
+              lineHeight: 1,
             }}
           >
-            {directionPositive ? '↑' : '↓'} {affectedDirection}
+            {directionPositive ? '↑' : '↓'}&nbsp;{affectedDirection}
           </span>
         </div>
         {/* 右：强度 */}
