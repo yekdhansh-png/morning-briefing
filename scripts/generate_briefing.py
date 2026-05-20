@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -30,6 +31,8 @@ try:
     from news_cls import fetch_cls_briefing
     from news_wscn import fetch_wscn_breakfast
     from news_stcn import fetch_stcn_briefing
+    from news_pick import pick_top3
+    from news_analyze import analyze_top3
 except ImportError as _e:
     print(f"[ERROR] 加载新闻抓取模块失败: {_e}", file=sys.stderr)
 
@@ -41,6 +44,12 @@ except ImportError as _e:
 
     def fetch_stcn_briefing():  # type: ignore
         return [], None
+
+    def pick_top3(c):  # type: ignore
+        return []
+
+    def analyze_top3(p):  # type: ignore
+        return []
 
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 TRADING_WEEKDAYS = {0, 1, 2, 3, 4}
@@ -298,10 +307,30 @@ def main() -> int:
     candidates = fetch_news_candidates()
     archive_news_candidates(candidates, now)
     print(f"  备选新闻共 {len(candidates)} 条 (已存档，前端不读)")
-    # 备选池仅落到 data/news-archive/，不写入 briefing.json，
-    # 等下一步 LLM 选 TOP 3 + 解读后再写入 briefing.json["news"]
 
-    # 4. 写回
+    # 4. LLM 选 TOP 3 + 解读
+    print("[Step 2.3] LLM 选 TOP 3 + 写解读...")
+    has_api_key = bool(os.environ.get("DEEPSEEK_API_KEY", "").strip())
+    if not has_api_key:
+        print("  [跳过] 未设置 DEEPSEEK_API_KEY，保留旧的 news 字段", file=sys.stderr)
+    elif not candidates:
+        print("  [跳过] 备选新闻池为空", file=sys.stderr)
+    else:
+        try:
+            picked = pick_top3(candidates)
+            print(f"  TOP 3 选定: {[p['index'] for p in picked]}")
+            for p in picked:
+                print(f"    - [{p['index']}] {p['title'][:50]} ({p['reason'][:30]})")
+            new_news = analyze_top3(picked)
+            if len(new_news) == 3:
+                data["news"] = new_news
+                print(f"  ✅ 已写入 news[3] 到 briefing.json")
+            else:
+                print(f"  [警告] 仅成功生成 {len(new_news)}/3 条解读，保留旧值", file=sys.stderr)
+        except Exception as e:
+            print(f"  [异常] LLM 流程失败: {e}", file=sys.stderr)
+
+    # 5. 写回
     save_briefing(data)
     print(f"[done] 已写入 {BRIEFING_PATH.relative_to(ROOT)}")
     return 0
