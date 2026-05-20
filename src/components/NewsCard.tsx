@@ -6,25 +6,30 @@ interface NewsCardProps {
 }
 
 function StrengthBar({ level }: { level: '强' | '中' | '弱' }) {
-  // 用真·虚线 border 替代 unicode 字符画
-  // 强 = 整条实+虚混合粗虚线；中 = 中等虚线；弱 = 稀疏虚线
-  const map: Record<string, { width: number; opacity: number }> = {
-    强: { width: 56, opacity: 1 },
-    中: { width: 44, opacity: 0.7 },
-    弱: { width: 32, opacity: 0.45 },
+  // 5 格虚线：弱=亮前 2 格 / 中=亮第 3 格 / 强=亮后 2 格
+  const litMap: Record<string, number[]> = {
+    弱: [0, 1],
+    中: [2],
+    强: [3, 4],
   };
-  const { width, opacity } = map[level];
+  const lit = new Set(litMap[level]);
   return (
     <div className="flex items-center justify-end gap-1.5">
-      <div
-        style={{
-          width,
-          height: 0,
-          borderTop: '2px dashed #E54D42',
-          opacity,
-        }}
-      />
-      <span className="text-[13px] font-bold leading-none" style={{ color: '#E54D42' }}>
+      <div className="flex items-center gap-[3px]">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            style={{
+              width: 9,
+              height: 0,
+              borderTop: '2px dashed',
+              borderTopColor: lit.has(i) ? '#E54D42' : '#E5C9C7',
+              opacity: lit.has(i) ? 1 : 0.55,
+            }}
+          />
+        ))}
+      </div>
+      <span className="text-[13px] font-bold leading-none ml-1" style={{ color: '#E54D42' }}>
         {level}
       </span>
     </div>
@@ -105,26 +110,22 @@ export default function NewsCard({ data }: NewsCardProps) {
         </button>
 
         {expanded && signalDetails && (
-          <div className="px-3 pb-3 pt-0.5">
-            <div className="grid grid-cols-[64px_1fr] gap-x-2.5 gap-y-2">
-              {signalDetails.map((d) => (
-                <div key={d.tag} className="contents">
-                  <div className="flex justify-start">
-                    <span
-                      className="text-[11px] px-1.5 py-1 rounded-md font-semibold leading-none"
-                      style={{
-                        background: '#FFD7D3',
-                        color: '#B91C1C',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {d.tag}
-                    </span>
-                  </div>
-                  <p className="text-[12.5px] leading-[1.7] text-[#5a2a26]">{d.content}</p>
-                </div>
-              ))}
-            </div>
+          <div className="px-3 pb-3 pt-0.5 space-y-2">
+            {signalDetails.map((d) => (
+              <p key={d.tag} className="text-[12.5px] leading-[1.85] text-[#5a2a26]">
+                <span
+                  className="text-[11px] px-1.5 py-[3px] rounded-md font-semibold mr-2 align-[1px]"
+                  style={{
+                    background: '#FFD7D3',
+                    color: '#B91C1C',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {d.tag}
+                </span>
+                {d.content}
+              </p>
+            ))}
           </div>
         )}
       </div>
@@ -149,7 +150,7 @@ export default function NewsCard({ data }: NewsCardProps) {
             </div>
           </div>
           <span
-            className="ml-2.5 text-[11px] px-2 py-1 rounded-full font-bold leading-none"
+            className="ml-2.5 inline-flex items-center text-[11px] px-2 h-[20px] rounded-full font-bold leading-none"
             style={{
               background: directionPositive ? '#E54D42' : '#1FAE6F',
               color: '#fff',
