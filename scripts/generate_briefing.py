@@ -33,6 +33,7 @@ try:
     from news_stcn import fetch_stcn_briefing
     from news_pick import pick_top3
     from news_analyze import analyze_top3
+    from markets_futures import fetch_futures_quotes
 except ImportError as _e:
     print(f"[ERROR] 加载新闻抓取模块失败: {_e}", file=sys.stderr)
 
@@ -51,18 +52,19 @@ except ImportError as _e:
     def analyze_top3(p):  # type: ignore
         return []
 
+    def fetch_futures_quotes():  # type: ignore
+        return []
+
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 TRADING_WEEKDAYS = {0, 1, 2, 3, 4}
 
-# 外盘 6 标的：(westock symbol, 展示名)
-GLOBAL_SYMBOLS = [
+# 外盘 6 标的：前 3 个走 westock（美股三大指数），后 3 个走新浪外盘期货
+INDEX_SYMBOLS = [
     ("usIXIC", "纳斯达克"),
     ("usINX", "标普500"),
     ("usDJI", "道琼斯"),
-    ("usGLD.AM", "黄金 ETF"),
-    ("usSLV.AM", "白银 ETF"),
-    ("usUSO.AM", "原油 ETF"),
 ]
+# 期货代码在 markets_futures.FUTURES_SYMBOLS 里定义：GC / SI / CL
 WESTOCK_PKG = "westock-data-clawhub@1.0.4"
 WESTOCK_TIMEOUT = 60  # 秒
 
@@ -184,19 +186,23 @@ def fetch_one_index(westock_sym: str) -> dict | None:
 
 
 def fetch_global_indices(prev: list[dict]) -> tuple[list[dict], int]:
+    """
+    返回 6 个标的：前 3 个美股指数走 westock，后 3 个 COMEX 金/银 + WTI 油走新浪外盘期货
+    单条失败时复用上一次值
+    """
     new_list: list[dict] = []
     ok_count = 0
     prev_by_name = {p["name"]: p for p in prev}
 
-    for sym, name in GLOBAL_SYMBOLS:
-        fetched = fetch_one_index(sym)
+    def append_with_fallback(name: str, fetched: dict | None) -> None:
+        nonlocal ok_count
         if fetched:
             ok_count += 1
             new_list.append({"name": name, **fetched})
             print(f"  [OK]    {name:10s} {fetched['value']:>10s} ({fetched['change']})")
         else:
             old = prev_by_name.get(name) or prev_by_name.get(_legacy_name(name)) or {
-                "name": name, "value": "—", "change": "—", "up": False
+                "name": name, "value": "—", "change": "—", "up": False,
             }
             new_list.append({
                 "name": name,
@@ -206,15 +212,46 @@ def fetch_global_indices(prev: list[dict]) -> tuple[list[dict], int]:
             })
             print(f"  [STALE] {name:10s} 使用上次值")
 
+    # === 1) 美股三大指数（westock） ===
+    for sym, name in INDEX_SYMBOLS:
+        append_with_fallback(name, fetch_one_index(sym))
+
+    # === 2) COMEX 黄金 / 白银 + WTI 原油（新浪外盘期货日线） ===
+    try:
+        futures = fetch_futures_quotes()
+    except Exception as e:
+        print(f"  [WARN] 期货抓取异常: {e}", file=sys.stderr)
+        futures = []
+    futures_by_name = {f["name"]: f for f in futures}
+    for _, fname in [("GC", "COMEX 黄金"), ("SI", "COMEX 白银"), ("CL", "WTI 原油")]:
+        f = futures_by_name.get(fname)
+        if f:
+            ok_count += 1
+            new_list.append(f)
+        else:
+            old = prev_by_name.get(fname) or prev_by_name.get(_legacy_name(fname)) or {
+                "name": fname, "value": "—", "change": "—", "up": False,
+            }
+            new_list.append({
+                "name": fname,
+                "value": old.get("value", "—"),
+                "change": old.get("change", "—"),
+                "up": old.get("up", False),
+            })
+            print(f"  [STALE] {fname:10s} 使用上次值")
+
     return new_list, ok_count
 
 
 def _legacy_name(name: str) -> str:
-    """兼容上版的展示名"""
+    """兼容上版的展示名（旧 → 新）"""
     return {
-        "黄金 ETF": "COMEX金",
-        "白银 ETF": "COMEX银",
-        "原油 ETF": "WTI原油",
+        "黄金 ETF": "COMEX 黄金",
+        "白银 ETF": "COMEX 白银",
+        "原油 ETF": "WTI 原油",
+        "COMEX金": "COMEX 黄金",
+        "COMEX银": "COMEX 白银",
+        "WTI原油": "WTI 原油",
     }.get(name, name)
 
 
