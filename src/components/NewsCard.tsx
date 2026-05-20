@@ -6,14 +6,13 @@ interface NewsCardProps {
 }
 
 function StrengthBar({ level }: { level: '强' | '中' | '弱' }) {
-  // 5 段虚线（用实心短线 + 间隙模拟，避免 border-dashed 自动重复变成 10 格）
-  // 弱=亮前 2 格 / 中=亮第 3 格 / 强=亮后 2 格
-  const litMap: Record<string, number[]> = {
-    弱: [0, 1],
-    中: [2],
-    强: [3, 4],
+  // 5 段虚线递进：弱=前 2 格 / 中=前 3 格 / 强=全 5 格
+  const litCountMap: Record<string, number> = {
+    弱: 2,
+    中: 3,
+    强: 5,
   };
-  const lit = new Set(litMap[level]);
+  const litCount = litCountMap[level] ?? 3;
   return (
     <div className="flex items-center justify-end gap-1.5">
       <div className="flex items-center gap-[5px]">
@@ -24,7 +23,7 @@ function StrengthBar({ level }: { level: '强' | '中' | '弱' }) {
               width: 10,
               height: 2,
               borderRadius: 1,
-              background: lit.has(i) ? '#E54D42' : '#E5C9C7',
+              background: i < litCount ? '#E54D42' : '#E5C9C7',
             }}
           />
         ))}
@@ -134,12 +133,12 @@ export default function NewsCard({ data }: NewsCardProps) {
         )}
       </div>
 
-      {/* 影响资产 / 影响强度 双栏 */}
+      {/* 影响资产 / 方向胶囊（居中） / 影响强度 三栏 */}
       <div
-        className="mt-3 rounded-xl flex items-center justify-between px-3 py-2.5"
-        style={{ background: '#F4F5F7' }}
+        className="mt-3 rounded-xl grid items-center px-3 py-2.5"
+        style={{ background: '#F4F5F7', gridTemplateColumns: '1fr auto 1fr' }}
       >
-        {/* 左：图标 + 板块 + 方向 */}
+        {/* 左：图标 + 板块 */}
         <div className="flex items-center">
           <span
             className="shrink-0 inline-flex items-center justify-center rounded-lg mr-2.5"
@@ -153,8 +152,11 @@ export default function NewsCard({ data }: NewsCardProps) {
               {affectedName}
             </div>
           </div>
+        </div>
+        {/* 中：方向胶囊（左右居中） */}
+        <div className="flex justify-center">
           <span
-            className="ml-2.5 inline-flex items-center justify-center text-[11.5px] px-2.5 rounded-full font-bold"
+            className="inline-flex items-center justify-center text-[11.5px] px-2.5 rounded-full font-bold"
             style={{
               background: directionPositive ? '#E54D42' : '#1FAE6F',
               color: '#fff',
