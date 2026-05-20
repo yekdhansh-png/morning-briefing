@@ -2,14 +2,11 @@ import { useBriefing } from '../data/BriefingContext';
 
 /**
  * 隔夜外盘黑色卡片
- * - 6 宫格：前 3 个 = 美股指数，后 3 个 = COMEX 金/银 + WTI 原油
+ * - 6 宫格：前 3 = 美股指数，后 3 = COMEX 金/银 + WTI 原油
  * - 全球资产 · 综合解读
  */
 export default function GlobalMarketCard() {
   const { globalIndices, globalSummary } = useBriefing();
-
-  // 推断分类（前 3 = 指数，后 3 = 商品）
-  const tagFor = (i: number) => (i < 3 ? '指数' : '商品');
 
   return (
     <div
@@ -43,34 +40,22 @@ export default function GlobalMarketCard() {
 
       {/* 6 宫格 */}
       <div className="grid grid-cols-3 gap-2">
-        {globalIndices.map((g, i) => {
+        {globalIndices.map((g) => {
           const isUp = g.up;
           const color = isUp ? '#FF6B5E' : '#3DD598';
           const bg = isUp ? 'rgba(255, 107, 94, 0.10)' : 'rgba(61, 213, 152, 0.10)';
-          const tag = tagFor(i);
           return (
             <div
               key={g.name}
-              className="rounded-xl px-2.5 py-2.5 relative"
+              className="rounded-xl px-2.5 py-2.5"
               style={{
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.07)',
               }}
             >
-              {/* 顶部：标的名 + 分类小角标 */}
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] text-white/60 font-medium truncate pr-1">
-                  {g.name}
-                </span>
-                <span
-                  className="shrink-0 text-[9px] px-1 py-[1px] rounded font-semibold"
-                  style={{
-                    background: 'rgba(212,175,55,0.18)',
-                    color: '#D4AF37',
-                  }}
-                >
-                  {tag}
-                </span>
+              {/* 标的名 */}
+              <div className="text-[11px] text-white/60 font-medium mb-1.5 truncate">
+                {g.name}
               </div>
               {/* 数值 */}
               <div className="text-[15px] font-bold leading-none tracking-tight tabular-nums">
