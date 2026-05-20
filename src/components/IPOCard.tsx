@@ -62,6 +62,12 @@ function IPOItemView({ item }: { item: IPOItem }) {
 export default function IPOCard() {
   const { ipo } = useBriefing();
   const { list: ipoList, footerNote: ipoFooterNote, btnText: ipoBtnText } = ipo;
+
+  // 未来 7 天没有新股可申购时，整个模块隐藏
+  if (!ipoList || ipoList.length === 0) {
+    return null;
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-card p-4 mb-3">
       <div className="flex items-center mb-3">

@@ -133,20 +133,20 @@
     },
     {
       "name": "COMEX 黄金",
-      "value": "4,495.20",
-      "change": "+0.22%",
+      "value": "4,496.90",
+      "change": "+0.26%",
       "up": true
     },
     {
       "name": "COMEX 白银",
-      "value": "75.98",
-      "change": "+2.73%",
+      "value": "76.06",
+      "change": "+2.84%",
       "up": true
     },
     {
       "name": "WTI 原油",
-      "value": "101.23",
-      "change": "-2.69%",
+      "value": "101.63",
+      "change": "-2.31%",
       "up": false
     }
   ],
@@ -223,30 +223,7 @@
     }
   ],
   "ipo": {
-    "list": [
-      {
-        "name": "智算光电",
-        "code": "301888",
-        "board": "创业板",
-        "boardColor": "green",
-        "price": "¥38.88",
-        "industry": "光通信",
-        "estProfit": "¥18,500",
-        "estPct": "(+48%)",
-        "highlight": "光模块行业景气延续，发行 PE 显著低于行业可比公司。"
-      },
-      {
-        "name": "海芯半导",
-        "code": "688999",
-        "board": "科创板",
-        "boardColor": "blue",
-        "price": "¥65.2",
-        "industry": "半导体设备",
-        "estProfit": "¥13,200",
-        "estPct": "(+20%)",
-        "highlight": "国产替代核心标的，绑定中芯国际，技术壁垒较高。"
-      }
-    ],
+    "list": [],
     "footerNote": "近 6 个月无新股破发 · 首日平均涨幅 248.90%",
     "btnText": "🔔 一键申购全部新股（2 只）  →"
   },

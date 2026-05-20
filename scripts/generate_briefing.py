@@ -36,6 +36,7 @@ try:
     from markets_futures import fetch_futures_quotes
     from news_us_close import fetch_us_close
     from global_summary import generate_global_summary
+    from ipo_calendar import fetch_ipo_calendar
 except ImportError as _e:
     print(f"[ERROR] 加载新闻抓取模块失败: {_e}", file=sys.stderr)
 
@@ -62,6 +63,9 @@ except ImportError as _e:
 
     def generate_global_summary(q, u):  # type: ignore
         return None
+
+    def fetch_ipo_calendar():  # type: ignore
+        return []
 
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 TRADING_WEEKDAYS = {0, 1, 2, 3, 4}
@@ -396,7 +400,43 @@ def main() -> int:
         except Exception as e:
             print(f"  [异常] 全球解读流程失败: {e}", file=sys.stderr)
 
-    # 6. 写回
+    # 6. 新股申购日历（未来 7 天）
+    print("[Step 2.5] 拉取新股申购日历（未来 7 天）...")
+    try:
+        ipo_items = fetch_ipo_calendar()
+        if ipo_items:
+            # 套到前端 IPOItem 字段（保留旧 list 里的 estProfit/estPct/highlight 占位值）
+            ipo_section = data.setdefault("ipo", {})
+            old_list = ipo_section.get("list", [])
+            old_by_code = {(it.get("code") or "")[:6]: it for it in old_list}
+
+            new_list = []
+            for it in ipo_items:
+                old = old_by_code.get(it["shortCode"], {})
+                new_list.append({
+                    "name": it["name"],
+                    "code": it["shortCode"],
+                    "board": it["board"],
+                    "boardColor": it["boardColor"],
+                    "price": f"¥{it['price']}",
+                    "industry": it["industry"],
+                    # 预估收益先写死（未来用估值模型替换）
+                    "estProfit": old.get("estProfit", "¥18,500"),
+                    "estPct": old.get("estPct", "(+48%)"),
+                    # 看点占位（待实现 LLM 生成）
+                    "highlight": old.get("highlight", "暂无看点解读"),
+                })
+            ipo_section["list"] = new_list
+            print(f"  ✅ 写入 {len(new_list)} 只新股")
+        else:
+            # 未来 7 天没有新股 → list 清空，前端会自动隐藏整个模块
+            ipo_section = data.setdefault("ipo", {})
+            ipo_section["list"] = []
+            print("  未来 7 天无新股申购，IPOCard 将隐藏")
+    except Exception as e:
+        print(f"  [异常] IPO 日历流程失败: {e}", file=sys.stderr)
+
+    # 7. 写回
     save_briefing(data)
     print(f"[done] 已写入 {BRIEFING_PATH.relative_to(ROOT)}")
     return 0
