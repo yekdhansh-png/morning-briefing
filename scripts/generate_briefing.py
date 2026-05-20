@@ -34,6 +34,8 @@ try:
     from news_pick import pick_top3
     from news_analyze import analyze_top3
     from markets_futures import fetch_futures_quotes
+    from news_us_close import fetch_us_close
+    from global_summary import generate_global_summary
 except ImportError as _e:
     print(f"[ERROR] 加载新闻抓取模块失败: {_e}", file=sys.stderr)
 
@@ -54,6 +56,12 @@ except ImportError as _e:
 
     def fetch_futures_quotes():  # type: ignore
         return []
+
+    def fetch_us_close():  # type: ignore
+        return None
+
+    def generate_global_summary(q, u):  # type: ignore
+        return None
 
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 TRADING_WEEKDAYS = {0, 1, 2, 3, 4}
@@ -333,11 +341,11 @@ def main() -> int:
     print(f"  hero.subTitle: {old_subtitle!r} -> {subtitle!r}")
 
     # 2. 拉外盘
-    print("[Step 2.1] 拉取外盘 6 宫格 (westock)...")
+    print("[Step 2.1] 拉取外盘 6 宫格（美股指数走 westock，COMEX 金/银 + WTI 油走新浪期货）...")
     prev_indices = data.get("globalIndices", [])
     new_indices, ok = fetch_global_indices(prev_indices)
     data["globalIndices"] = new_indices
-    print(f"  外盘 {ok}/{len(GLOBAL_SYMBOLS)} 拉取成功")
+    print(f"  外盘 {ok}/6 拉取成功")
 
     # 3. 拉新闻备选池（双源：财联社早报 + 华尔街见闻早餐）
     print("[Step 2.2] 拉取新闻备选池...")
@@ -367,7 +375,28 @@ def main() -> int:
         except Exception as e:
             print(f"  [异常] LLM 流程失败: {e}", file=sys.stderr)
 
-    # 5. 写回
+    # 5. LLM 生成全球资产 · 综合解读（80-100 字）
+    print("[Step 2.4] LLM 生成全球资产综合解读...")
+    if not has_api_key:
+        print("  [跳过] 未设置 DEEPSEEK_API_KEY，保留旧 globalSummary", file=sys.stderr)
+    else:
+        try:
+            us_close = fetch_us_close()
+            if not us_close:
+                print("  [跳过] 美股收评抓取失败", file=sys.stderr)
+            else:
+                print(f"  美股收评: {us_close['title']} ({us_close['length']} 字)")
+                summary = generate_global_summary(new_indices, us_close)
+                if summary:
+                    data["globalSummary"] = summary
+                    print(f"  ✅ globalSummary 已更新（{len(summary)} 字）")
+                    print(f"     {summary}")
+                else:
+                    print("  [警告] LLM 输出为空，保留旧值", file=sys.stderr)
+        except Exception as e:
+            print(f"  [异常] 全球解读流程失败: {e}", file=sys.stderr)
+
+    # 6. 写回
     save_briefing(data)
     print(f"[done] 已写入 {BRIEFING_PATH.relative_to(ROOT)}")
     return 0

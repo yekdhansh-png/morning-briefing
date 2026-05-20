@@ -133,20 +133,20 @@
     },
     {
       "name": "COMEX 黄金",
-      "value": "4,491.40",
-      "change": "+0.14%",
+      "value": "4,495.20",
+      "change": "+0.22%",
       "up": true
     },
     {
       "name": "COMEX 白银",
-      "value": "75.72",
-      "change": "+2.38%",
+      "value": "75.98",
+      "change": "+2.73%",
       "up": true
     },
     {
       "name": "WTI 原油",
-      "value": "102.14",
-      "change": "-1.82%",
+      "value": "101.23",
+      "change": "-2.69%",
       "up": false
     }
   ],
