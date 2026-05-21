@@ -19,7 +19,7 @@ export default function BottomBar() {
         {/* 定制输入框（含内嵌发送按钮），占底 bar 左半宽度 */}
         <div
           className="flex items-center rounded-full pl-3.5 pr-1 h-[36px]"
-          style={{ background: '#FAFAFA', border: '1px solid #F0F0F0', width: '50%' }}
+          style={{ background: '#FAFAFA', border: '1px solid #F0F0F0', width: '70%' }}
         >
           <button
             type="button"
