@@ -27,7 +27,17 @@ from html import unescape
 from pathlib import Path
 
 # Skill 路径
-SKILL_DIR = Path.home() / ".workbuddy" / "skills" / "westock-snp-news"
+# 优先用本地（开发机）安装的 skill，找不到时回退到项目 vendor 目录（CI 用）
+_HOME_SKILL_DIR = Path.home() / ".workbuddy" / "skills" / "westock-snp-news"
+_VENDOR_SKILL_DIR = Path(__file__).resolve().parent.parent / "vendor" / "westock-snp-news"
+
+if (_HOME_SKILL_DIR / "scripts" / "index.js").exists():
+    SKILL_DIR = _HOME_SKILL_DIR
+elif (_VENDOR_SKILL_DIR / "scripts" / "index.js").exists():
+    SKILL_DIR = _VENDOR_SKILL_DIR
+else:
+    SKILL_DIR = _HOME_SKILL_DIR  # 仍指向 home 以便错误信息提示
+
 SKILL_SCRIPT = SKILL_DIR / "scripts" / "index.js"
 SKILL_ENV = SKILL_DIR / ".env"
 SNP_TIMEOUT = 60
@@ -42,14 +52,39 @@ def _call_snp(args: list[str], timeout: int = SNP_TIMEOUT) -> dict:
     """
     调用 SNP CLI，从 stdout 末尾抠出 JSON 数据。
     返回 dict（CLI 的 JSON_OUTPUT_START 块内容）；失败抛 RuntimeError。
+
+    优先用本地 .env，找不到时回退到环境变量 SNP_MCP_TOKEN（适合 CI）。
     """
+    import os
+    import tempfile
+
     if not SKILL_SCRIPT.exists():
         raise RuntimeError(f"SNP skill 脚本不存在: {SKILL_SCRIPT}")
-    if not SKILL_ENV.exists():
-        raise RuntimeError(f"SNP token 未配置: {SKILL_ENV}")
 
-    cmd = ["node", f"--env-file={SKILL_ENV}", str(SKILL_SCRIPT), *args]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    env_file = SKILL_ENV
+    cleanup_tmp = False
+    if not SKILL_ENV.exists():
+        token = os.environ.get("SNP_MCP_TOKEN", "").strip()
+        if not token:
+            raise RuntimeError(
+                f"SNP token 未配置: 既没有 {SKILL_ENV}，也没有环境变量 SNP_MCP_TOKEN"
+            )
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False)
+        tmp.write(f"SNP_MCP_TOKEN={token}\n")
+        tmp.close()
+        env_file = Path(tmp.name)
+        cleanup_tmp = True
+
+    cmd = ["node", f"--env-file={env_file}", str(SKILL_SCRIPT), *args]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    finally:
+        if cleanup_tmp:
+            try:
+                env_file.unlink()
+            except Exception:
+                pass
+
     if r.returncode != 0:
         raise RuntimeError(f"SNP CLI 失败 (code={r.returncode}): {r.stderr[:300] or r.stdout[:300]}")
 
