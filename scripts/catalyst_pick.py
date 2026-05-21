@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+"""
+Step 2: 从合并的多路信源里选 TOP 2 利好催化事件
+
+输入：
+  candidates: list[dict] — 由 generate_briefing 准备好的候选池，每条至少含
+              {source, section, title, body, weight}
+  exclude_titles: list[str] — 要闻 TOP 3 的标题（去重排除）
+
+输出：list[dict]，2 条 TOP 利好：
+  {
+    "rank": 1,
+    "source": "上证早知道·上证聚焦",
+    "title": "绿电直连政策升级 绿电价值迎来重估",
+    "concept": "绿电",           # 概念名（≤6 字）
+    "catalyst": "...",           # 催化逻辑（30-50 字）
+    "reason": "..."              # 为什么今天可能涨（40-60 字，含'有望/或'等节奏副词）
+  }
+
+选股逻辑（三层硬约束）：
+  A. 热门度优先：优先选当前市场主线赛道
+  B. 涨幅潜力：今天最可能开盘高开/盘中拉升的
+  C. 强制去重：不能跟要闻 TOP 3 重复（按 title 关键词模糊判定）
+"""
+from __future__ import annotations
+
+import json
+import sys
+
+from llm_client import chat_json, LLMError
+
+
+# 当前 A 股主线赛道白名单（2026 年）——LLM 在分数接近时优先这些方向
+HOT_CONCEPTS_HINT = """
+当前 A 股主流热门赛道（按市场关注度排序）：
+- AI 算力 / 服务器 / 液冷 / 光模块 / 光通信 / 交换机
+- 半导体 / 存储芯片 / HBM / 国产芯片 / 先进封装 / 半导体设备
+- 智能驾驶 / 智能眼镜 / AI 终端 / 机器人 / 具身智能
+- 商业航天 / 卫星互联网 / 低空经济 / eVTOL
+- 新能源车 / 锂电池 / 固态电池 / 充电桩
+- 绿电 / 风电 / 光伏 / 储能 / 核电
+- 创新药 / CXO / 减肥药 / 医疗器械
+- 军工 / 大飞机 / 国防装备
+- 有色金属（黄金、铜、稀土、锂、镍）/ 油气 / 化工
+- 出口链 / 跨境电商 / 一带一路
+- 数字货币 / 跨境支付 / 稳定币
+- 农业 / 转基因 / 生猪养殖
+- 国资改革 / 央企重组 / 并购重组
+
+冷门 / 降级处理：
+- 单一地区性基建 / 小县城项目
+- 远期 5 年规划没具体落地的
+- 政策"征求意见稿"无具体补贴金额/时间表
+- 已发酵超过 3 天的事件
+- 单个小市值公司（< 100 亿）的内部变动
+"""
+
+
+SYSTEM_PROMPT = f"""# 角色
+你是一位 A 股短线题材交易员，每天 7:30 看完早报选出"今日最可能涨的 2 个利好催化"。
+你的判断标准只有一个：**今天开盘哪个概念最容易高开高走、最容易吸引资金。**
+
+# 任务
+我会给你今日抓到的"利好备选事件池"（来自上证早知道、财联社早报、证券时报等多路），
+请你按下方"三层选股逻辑"选出 TOP 2，并给出概念+催化+涨幅理由。
+
+# 三层选股逻辑（必须按顺序执行）
+
+## 第 1 层：硬过滤——去重
+已被早报"重磅要闻"模块占用的事件**绝对不能再选**。我会在 user prompt 里给你
+"requires_exclude" 列表，那些标题对应的事件、以及它们所属的同一概念主题，
+都要从候选中剔除。
+- 判断标准不是严格字符串匹配，而是**主题级别**——只要催化逻辑相同就视为重复
+  例：要闻已有"英伟达财报超预期" → 即便备选池里有"AMD Q1 营收超预期"，
+  二者催化逻辑接近（都是 AI 算力业绩兑现），**禁止再选 AI 算力**
+- 如果剔除后剩余候选 < 2，就在保证不雷同的前提下选差异最大的
+
+## 第 2 层：热门度筛选——优先主线赛道
+{HOT_CONCEPTS_HINT}
+
+打分规则：
+- 主线赛道（白名单内）+ 强催化 → ★★★ 优先入选
+- 主线赛道 + 中等催化 → ★★ 候选
+- 非主线但具体可定价（公司大单、政策落地）→ ★ 候选
+- 冷门/远期/小众 → ✗ 直接淘汰
+
+## 第 3 层：涨幅潜力——边际定价（与要闻 prompt 同源）
+判断"今天开盘涨不涨"的核心是**未计价的边际增量**：
+
+时效优先级：
+- ★★★ 凌晨/昨日盘后（15:00 后）发布 → 今日盘前未计价，开盘最易高开
+- ★★ 昨日盘中（09:30-15:00） + 当日尾盘还没炒到位 → 仍有续作空间
+- ✗ 24 小时前的旧闻 → 已计价，不选
+
+强度优先级：
+- 政策细则落地（含具体补贴金额/受益清单/时间表） > 政策意见稿
+- 龙头公司大单/超预期业绩 > 一般业绩预告
+- 海外产业链异动直接映射 A 股 > 远期前瞻
+- 含机构观点（券商研报、大行预测）背书 > 纯事实
+- 量化数据支撑（如"出货量翻倍/订单 X 亿"）> 模糊定性
+
+# 输出严格 JSON Schema（字段缺一不可）
+{{
+  "top2": [
+    {{
+      "rank": 1,
+      "source_section": "事件来自的章节，如'上证早知道·上证聚焦' / '财联社早报·投资机会参考'",
+      "source_title": "原事件标题（保留原文，便于追溯）",
+      "concept": "对应的概念/板块名，≤6 字（如'绿电'/'光通信'/'机器人'）",
+      "catalyst": "催化逻辑 30-50 字。说清'什么事件 + 为什么是利好'。例：'国家发改委发文升级绿电直连政策，明确多用户共建机制，绿电消纳与价值有望系统重估'",
+      "reason": "为什么今天可能涨 40-60 字。必须用'有望/或/大概率/边际'等节奏副词留余地。例：'政策落地驱动板块情绪修复，叠加电力市场化改革大主线，绿电运营商估值或迎修复，新能源 ETF 大概率高开'"
+    }},
+    {{
+      "rank": 2,
+      "source_section": "...",
+      "source_title": "...",
+      "concept": "...",
+      "catalyst": "...",
+      "reason": "..."
+    }}
+  ]
+}}
+
+# 严格约束
+- 必须 2 条，**且必须分属不同主线赛道**（不能两条都是 AI 算力 / 都是新能源）
+- 输出只能是 JSON，不要任何前后缀
+- source_title 必须从候选池里 verbatim 复制，便于回溯
+- catalyst 严禁罗列个股（"XX 涨 10%"）—— 那是要闻干的活，这里只讲事件
+- reason 严禁绝对化措辞（"必涨/抄底/建议买入"）
+- 如果候选池没有合适的（如全是冷门/已被要闻占用），输出 top2: [] 空数组"""
+
+
+def pick_top2_catalysts(
+    candidates: list[dict],
+    exclude_titles: list[str] | None = None,
+) -> list[dict]:
+    """
+    候选池 → LLM → TOP 2 利好催化
+
+    candidates 每条至少包含：
+      - source: "上证早知道·上证聚焦" / "财联社早报" / ...
+      - title: 事件标题
+      - body: 事件正文（含背景 + 机构观点）
+      - section: 章节（用于权重）
+      - weight: 0~1 浮点
+
+    exclude_titles: 已选要闻 TOP 3 的标题列表（去重排除）
+    """
+    if not candidates:
+        return []
+
+    exclude_titles = exclude_titles or []
+
+    # 拼装候选清单（截断长度避免 token 浪费）
+    lines = []
+    for i, c in enumerate(candidates):
+        title = (c.get("title") or "")[:100]
+        body = (c.get("body") or c.get("content") or "")[:280]
+        source = c.get("source") or "?"
+        weight = c.get("weight", 0.5)
+        lines.append(
+            f"[{i}] [w={weight:.1f}] <{source}> {title}\n     {body}"
+        )
+    listing = "\n\n".join(lines)
+
+    exclude_block = (
+        "## 已被要闻占用（禁选）\n"
+        + "\n".join(f"- {t}" for t in exclude_titles)
+        if exclude_titles else "## 已被要闻占用（禁选）\n（无）"
+    )
+
+    user_prompt = f"""{exclude_block}
+
+## 候选事件池（共 {len(candidates)} 条）
+{listing}
+
+按 schema 输出 JSON。务必：
+1. 严格剔除与要闻同主题的事件
+2. 优先主线赛道（参考 system 的热门赛道清单）
+3. 两条事件分属不同赛道
+4. 优先选凌晨/昨日盘后发生、含机构观点的事件"""
+
+    try:
+        result = chat_json(
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+            temperature=0.3,
+            max_tokens=1200,
+        )
+    except LLMError as e:
+        print(f"[catalyst_pick] LLM 失败: {e}", file=sys.stderr)
+        return []
+
+    top2 = result.get("top2") or []
+    return top2[:2]
+
+
+if __name__ == "__main__":
+    # 调试入口：用今日 SNP 上证早知道 + 财联社早报存档
+    import datetime
+    from pathlib import Path
+
+    sys.path.insert(0, "scripts")
+    try:
+        from news_snp import fetch_szzd_today
+    except ImportError:
+        from scripts.news_snp import fetch_szzd_today  # type: ignore
+
+    # 1) SNP 上证早知道
+    candidates: list[dict] = []
+    szzd = fetch_szzd_today()
+    if szzd:
+        for ev in szzd.get("events", []):
+            candidates.append({
+                "source": f"上证早知道·{ev['section']}",
+                "section": ev["section"],
+                "title": ev["title"],
+                "body": ev["body"],
+                "weight": ev["weight"],
+            })
+
+    # 2) 财联社早报存档
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    archive = Path("data/news-archive") / f"{today}.json"
+    if archive.exists():
+        with archive.open() as f:
+            news_data = json.load(f)
+        for it in news_data.get("items", []):
+            candidates.append({
+                "source": f"{it.get('source','?')}·{it.get('section','?')}",
+                "section": it.get("section", "?"),
+                "title": it.get("title", ""),
+                "body": it.get("content", ""),
+                "weight": 0.5,
+            })
+
+    print(f"候选池: {len(candidates)} 条", file=sys.stderr)
+
+    # 3) 调用 — 用 briefing.json 里的现有要闻 TOP 3 作 exclude
+    briefing = json.load(open("public/briefing.json", encoding="utf-8"))
+    exclude_titles = [n.get("title", "") for n in briefing.get("news", [])]
+    print(f"\n要闻 TOP 3 (排除清单):", file=sys.stderr)
+    for t in exclude_titles:
+        print(f"  - {t[:60]}", file=sys.stderr)
+
+    top2 = pick_top2_catalysts(candidates, exclude_titles=exclude_titles)
+    print(f"\n=== TOP 2 利好催化 ({len(top2)} 条) ===")
+    print(json.dumps(top2, ensure_ascii=False, indent=2))
