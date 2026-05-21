@@ -15,33 +15,37 @@ export default function BottomBar() {
       className="fixed bottom-0 left-0 right-0 z-30 mx-auto"
       style={{ maxWidth: 480, background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)' }}
     >
-      <div className="flex items-center gap-2.5 px-3 py-2.5 border-t" style={{ borderColor: '#EEE' }}>
-        {/* 定制输入框 */}
-        <button
-          type="button"
-          onClick={handleOpen}
-          className="flex-1 flex items-center rounded-full px-3.5 h-[36px] text-left"
-          style={{ background: '#FAFAFA', border: '1px solid #F0F0F0' }}
+      <div className="flex items-center px-3 py-2.5 border-t" style={{ borderColor: '#EEE' }}>
+        {/* 定制输入框（含内嵌发送按钮），占底 bar 左半宽度 */}
+        <div
+          className="flex items-center rounded-full pl-3.5 pr-1 h-[36px]"
+          style={{ background: '#FAFAFA', border: '1px solid #F0F0F0', width: '50%' }}
         >
-          <SparkleIcon />
-          <span className="text-[12.5px] text-gray-400 ml-2">定制我的专属早报</span>
-        </button>
+          <button
+            type="button"
+            onClick={handleOpen}
+            className="flex-1 flex items-center text-left h-full min-w-0"
+          >
+            <SparkleIcon />
+            <span className="text-[12.5px] text-gray-400 ml-2 truncate">定制我的专属早报</span>
+          </button>
+          {/* 内嵌红色 ↑ 发送按钮 */}
+          <button
+            type="button"
+            onClick={handleOpen}
+            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
+            style={{
+              background: '#E54D42',
+              boxShadow: '0 2px 5px rgba(229, 77, 66, 0.30)',
+            }}
+            aria-label="发送"
+          >
+            <ArrowUpIcon />
+          </button>
+        </div>
 
-        {/* 红色 ↑ 按钮 */}
-        <button
-          type="button"
-          onClick={handleOpen}
-          className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-white"
-          style={{
-            background: '#E54D42',
-            boxShadow: '0 2px 6px rgba(229, 77, 66, 0.30)',
-          }}
-        >
-          <ArrowUpIcon />
-        </button>
-
-        {/* 去自选 / 评论 / 分享 */}
-        <div className="flex items-center gap-3 pl-1">
+        {/* 去自选 / 评论 / 分享（占右半区，平均分布） */}
+        <div className="flex-1 flex items-center justify-around pl-3">
           <ActionBtn icon={<BookmarkIcon />} label="去自选" />
           <ActionBtn icon={<CommentIcon />} label="评论" />
           <ActionBtn icon={<ShareIcon />} label="分享" />
