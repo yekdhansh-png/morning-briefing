@@ -60,13 +60,32 @@ export interface IPOItem {
 
 export interface CatalystStock {
   name: string;
-  desc: string;
+  code?: string;
+  role?: string;        // 龙头 / 弹性 / 次新
+  reason: string;       // 30-40 字入选理由
+  industry?: string;
+  ret_5d?: number;      // 近 5 日涨幅(%)
+  ret_20d?: number;
+  ret_60d?: number;
+  main_5d_yi?: number;  // 主力 5 日资金(亿)
 }
 
 export interface CatalystItem {
-  sector: string;
-  title: '机构热评' | '市场热议';
-  content: string;
+  // 旧字段（保留向下兼容，渲染时可用作 fallback）
+  sector?: string;
+  title?: string;
+  content?: string;
+  // 新字段（LLM 输出）
+  concept?: string;          // 概念名 ≤6 字
+  tag?: string;              // 4 字标签：政策落地/巨头确认/涨价信号 等
+  event?: string;            // 1 句话事件 ≤25 字
+  catalystPath?: string;     // 1 句话催化路径 ≤25 字
+  event_level?: 'S' | 'A' | 'B' | 'C' | 'D';
+  fundamental_signal?: string;
+  catalyst?: string;
+  reason?: string;           // 整体看好理由
+  source_section?: string;
+  source_title?: string;
   stocks: CatalystStock[];
 }
 
@@ -265,23 +284,51 @@ export const defaultBriefing: BriefingData = {
   },
   catalyst: [
     {
-      sector: 'AI 算力',
-      title: '机构热评',
-      content:
-        '黄仁勋 GTC 发布 GB300 及 Rubin 路线图，1.6T 光模块用量翻倍至 144 个，液冷成标配。',
+      concept: 'AI 算力',
+      tag: '巨头确认',
+      event: '黄仁勋 GTC 发布 Rubin 路线图',
+      catalystPath: '海外巨头确认→1.6T 用量翻倍→产业链共振',
+      event_level: 'B',
+      fundamental_signal: '需求拉动',
+      catalyst: '黄仁勋 GTC 发布 GB300 及 Rubin 路线图，1.6T 光模块用量翻倍至 144 个，液冷成标配。',
+      reason: '海外算力链确认升级路径，A 股光模块/液冷板块或迎价值重估。',
       stocks: [
-        { name: '中际旭创', desc: '全球光模块龙头，1.6T 产品率先量产，份额持续提升。' },
-        { name: '英维克', desc: '液冷温控核心供应商，深度绑定头部互联网客户。' },
+        {
+          name: '中际旭创',
+          code: 'sz300308',
+          role: '龙头',
+          reason: '全球光模块龙头，1.6T 产品已批量出货，AI 算力链核心受益标的，业绩兑现度高。',
+        },
+        {
+          name: '英维克',
+          code: 'sz002837',
+          role: '弹性',
+          reason: '液冷温控核心供应商，深度绑定头部互联网客户，订单可见度高、弹性突出。',
+        },
       ],
     },
     {
-      sector: '有色',
-      title: '市场热议',
-      content:
-        'LME 铜报 9,485 美元/吨创 5 月新高；COMEX 金 2,725 美元再创历史新高，美元指数跌破 106。',
+      concept: '有色',
+      tag: '涨价信号',
+      event: 'LME 铜与 COMEX 金双双创新高',
+      catalystPath: '价格突破→量价齐升→矿企业绩弹性',
+      event_level: 'B',
+      fundamental_signal: '价格上涨',
+      catalyst: 'LME 铜报 9,485 美元/吨创 5 月新高；COMEX 金 2,725 美元再创历史新高，美元指数跌破 106。',
+      reason: '铜金双双突破驱动有色板块系统性重估，矿企量价齐升业绩弹性大。',
       stocks: [
-        { name: '紫金矿业', desc: '铜金双主业全球矿企，量价齐升业绩弹性大。' },
-        { name: '山东黄金', desc: 'A 股黄金龙头，金价新高直接受益弹性最强。' },
+        {
+          name: '紫金矿业',
+          code: 'sh601899',
+          role: '龙头',
+          reason: '铜金双主业全球矿企，量价齐升业绩弹性大，A 股有色龙头机构筹码集中。',
+        },
+        {
+          name: '山东黄金',
+          code: 'sh600547',
+          role: '弹性',
+          reason: 'A 股黄金龙头，金价新高直接受益弹性最强，纯金属股短线题材属性突出。',
+        },
       ],
     },
   ],

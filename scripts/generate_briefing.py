@@ -37,6 +37,9 @@ try:
     from news_us_close import fetch_us_close
     from global_summary import generate_global_summary
     from ipo_calendar import fetch_ipo_calendar
+    from news_snp import fetch_szzd_today
+    from catalyst_pick import pick_top2_catalysts
+    from catalyst_stocks_pick import attach_stocks_to_top2
 except ImportError as _e:
     print(f"[ERROR] 加载新闻抓取模块失败: {_e}", file=sys.stderr)
 
@@ -66,6 +69,15 @@ except ImportError as _e:
 
     def fetch_ipo_calendar():  # type: ignore
         return []
+
+    def fetch_szzd_today():  # type: ignore
+        return None
+
+    def pick_top2_catalysts(c, exclude_titles=None):  # type: ignore
+        return []
+
+    def attach_stocks_to_top2(top2):  # type: ignore
+        return top2
 
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 TRADING_WEEKDAYS = {0, 1, 2, 3, 4}
@@ -436,7 +448,60 @@ def main() -> int:
     except Exception as e:
         print(f"  [异常] IPO 日历流程失败: {e}", file=sys.stderr)
 
-    # 7. 写回
+    # 7. 利好催化 TOP 2（含每个利好选 2 只受益股）
+    print("[Step 2.6] LLM 选 TOP 2 利好催化 + 选股...")
+    if not has_api_key:
+        print("  [跳过] 未设置 DEEPSEEK_API_KEY，保留旧 catalyst 字段", file=sys.stderr)
+    else:
+        try:
+            # 信源 1：上证早知道
+            catalyst_pool = []
+            try:
+                szzd = fetch_szzd_today()
+                if szzd:
+                    for ev in szzd.get("events", []):
+                        catalyst_pool.append({
+                            "source": f"上证早知道·{ev['section']}",
+                            "section": ev["section"],
+                            "title": ev["title"],
+                            "body": ev["body"],
+                            "weight": ev["weight"],
+                        })
+                    print(f"  上证早知道 {len(catalyst_pool)} 条")
+            except Exception as e:
+                print(f"  [警告] 上证早知道抓取失败: {e}", file=sys.stderr)
+
+            # 信源 2：复用早报候选池（财联社/证券时报/华尔街见闻）
+            for it in candidates:
+                catalyst_pool.append({
+                    "source": f"{it.get('source','?')}·{it.get('section','?')}",
+                    "section": it.get("section", "?"),
+                    "title": it.get("title", ""),
+                    "body": it.get("content", ""),
+                    "weight": 0.5,
+                })
+
+            # 取要闻 TOP 3 的 title 作为去重排除
+            exclude_titles = [n.get("title", "") for n in data.get("news", [])]
+            print(f"  催化候选池总数 {len(catalyst_pool)}，排除要闻 TOP3：{len(exclude_titles)} 条")
+
+            top2 = pick_top2_catalysts(catalyst_pool, exclude_titles=exclude_titles)
+            if not top2:
+                print("  [警告] LLM 未选出 TOP 2 利好，保留旧 catalyst", file=sys.stderr)
+            else:
+                # 选股
+                top2_with_stocks = attach_stocks_to_top2(top2)
+                data["catalyst"] = top2_with_stocks
+                print(f"  ✅ 写入 catalyst[{len(top2_with_stocks)}]:")
+                for cat in top2_with_stocks:
+                    stock_names = " / ".join([s.get("name", "?") for s in cat.get("stocks", [])])
+                    print(f"     - [{cat.get('event_level','?')}] {cat.get('concept','')}: {stock_names}")
+        except Exception as e:
+            print(f"  [异常] 利好催化流程失败: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
+
+    # 8. 写回
     save_briefing(data)
     print(f"[done] 已写入 {BRIEFING_PATH.relative_to(ROOT)}")
     return 0
