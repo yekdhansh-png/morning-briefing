@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import HeaderCard from './components/HeaderCard';
 import SectionTitle from './components/SectionTitle';
-import StockCard from './components/StockCard';
+import StockSection from './components/StockSection';
 import GlobalMarketCard from './components/GlobalMarketCard';
 import NewsCard from './components/NewsCard';
 import IPOCard from './components/IPOCard';
@@ -11,10 +11,13 @@ import CustomSheet from './components/CustomSheet';
 import { loadBriefing, defaultBriefing } from './data/briefing';
 import type { BriefingData } from './data/briefing';
 import { BriefingContext, SheetContext } from './data/BriefingContext';
+import { usePreferences } from './data/usePreferences';
+import type { SectionOrderItem } from './data/usePreferences';
 
 export default function App() {
   const [data, setData] = useState<BriefingData | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { prefs } = usePreferences();
 
   useEffect(() => {
     loadBriefing().then(setData).catch(() => setData(defaultBriefing));
@@ -28,6 +31,39 @@ export default function App() {
     );
   }
 
+  const renderSection = (sec: SectionOrderItem) => {
+    if (!sec.visible) return null;
+    switch (sec.id) {
+      case 'stock':
+        return (
+          <div key="stock">
+            <SectionTitle title="自选动态" />
+            <StockSection />
+          </div>
+        );
+      case 'news':
+        return (
+          <div key="news">
+            <SectionTitle title="重磅要闻" />
+            <GlobalMarketCard />
+            {data.news.map((n) => (
+              <NewsCard key={n.no} data={n} />
+            ))}
+          </div>
+        );
+      case 'opportunity':
+        return (
+          <div key="opportunity">
+            <SectionTitle title="今日机会" />
+            <CatalystCard />
+            <IPOCard />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <BriefingContext.Provider value={data}>
       <SheetContext.Provider value={{ open: sheetOpen, setOpen: setSheetOpen }}>
@@ -35,20 +71,7 @@ export default function App() {
           <div className="mx-auto max-w-[480px] px-3.5 pt-3 pb-24">
             <HeaderCard />
 
-            <SectionTitle title="自选动态" />
-            {data.stocks.map((s) => (
-              <StockCard key={s.code} data={s} />
-            ))}
-
-            <SectionTitle title="重磅要闻" />
-            <GlobalMarketCard />
-            {data.news.map((n) => (
-              <NewsCard key={n.no} data={n} />
-            ))}
-
-            <SectionTitle title="今日机会" />
-            <IPOCard />
-            <CatalystCard />
+            {prefs.sectionOrder.map(renderSection)}
 
             {/* 免责声明 */}
             <div className="text-center mt-4 mb-2">
