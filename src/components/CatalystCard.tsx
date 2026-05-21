@@ -4,7 +4,6 @@ import { useBriefing } from '../data/BriefingContext';
 function CatalystBlock({ item }: { item: CatalystItem }) {
   const concept = item.concept || item.sector || '';
   const tag = item.tag || item.title || '机构热评';
-  const path = item.catalystPath || '';
   const catalyst = item.catalyst || item.content || '';
 
   return (
@@ -26,22 +25,13 @@ function CatalystBlock({ item }: { item: CatalystItem }) {
         </span>
       </div>
 
-      {/* 浅粉卡：catalyst 主文 + 可选催化路径 */}
+      {/* 浅粉卡：仅 catalyst 主文 */}
       <div
         className="rounded-lg px-3 py-2.5"
         style={{ background: '#FFF5F4' }}
       >
         {catalyst && (
           <p className="text-[12.5px] leading-[1.75] text-[#3a3a3a]">{catalyst}</p>
-        )}
-        {path && (
-          <p
-            className="text-[11.5px] leading-[1.6] mt-1.5"
-            style={{ color: '#9A5A56' }}
-          >
-            <span className="font-semibold">催化路径 · </span>
-            {path}
-          </p>
         )}
       </div>
 
