@@ -53,9 +53,6 @@ export default function App() {
             {/* 免责声明 */}
             <div className="text-center mt-4 mb-2">
               <p className="text-[11.5px] text-gray-400">{data.disclaimer}</p>
-              <p className="text-[11.5px] text-gray-400 mt-1">
-                由 <span style={{ color: '#7C5BD9' }} className="font-semibold">With</span> 通过自然语言生成
-              </p>
             </div>
           </div>
 
