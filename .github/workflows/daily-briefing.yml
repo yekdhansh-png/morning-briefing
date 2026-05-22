@@ -1,12 +1,15 @@
 name: Daily Morning Briefing
 
 # 触发：
-# - 每交易日北京时间 07:30（UTC 周日-周四 23:30）自动跑
+# - 每交易日北京时间 07:30 / 07:45 / 08:00 三个时间点尝试（GitHub 免费 cron 经常跳过/延迟，多打几枪）
+#   配合下方 concurrency.group + cancel-in-progress 防止重复跑
 # - 手动触发（workflow_dispatch）
 # - 推送到 main 也会重建一次（便于初次部署）
 on:
   schedule:
-    - cron: '30 23 * * 0-4'
+    - cron: '30 23 * * 0-4'   # UTC 23:30 = 北京 07:30
+    - cron: '45 23 * * 0-4'   # UTC 23:45 = 北京 07:45（backup 1）
+    - cron: '0 0 * * 1-5'     # UTC 00:00 = 北京 08:00（backup 2）
   workflow_dispatch:
   push:
     branches: [main]
@@ -17,10 +20,11 @@ permissions:
   pages: write
   id-token: write
 
-# 同一时间只跑一个部署，新触发会取消旧的
+# 同一时间只跑一个；新触发会"等待"或被丢弃，而不是取消正在跑的（因为我们做了 backup 多触发，
+# 取消反而会让 7:30 那次跑了一半的工作浪费掉）
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
