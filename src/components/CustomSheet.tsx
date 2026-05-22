@@ -124,7 +124,13 @@ function HomeView({ setView }: { setView: (v: View) => void }) {
 
   const orderSummary = prefs.sectionOrder
     .filter((s) => s.visible)
-    .map((s) => ({ stock: '自选股', news: '重磅要闻', opportunity: '今日机会' }[s.id]))
+    .map((s) => ({
+      temperature: '市场温度',
+      stock: '自选股',
+      opportunity: '今日机会',
+      news: '重磅要闻',
+      tips: '交易提示',
+    }[s.id]))
     .join(' → ');
 
   return (
@@ -325,9 +331,11 @@ function WatchPanel() {
    ============================================================ */
 
 const SECTION_LABELS: Record<SectionOrderItem['id'], { label: string; icon: string; desc: string }> = {
+  temperature: { label: '市场温度', icon: '🌡️', desc: '盘前一句话 + 温度计' },
   stock: { label: '自选股', icon: '⭐', desc: '我的关注股票实时行情' },
+  opportunity: { label: '今日机会', icon: '🔥', desc: '利好催化 + 受益龙头' },
   news: { label: '重磅要闻', icon: '📰', desc: '隔夜外盘 + TOP 3 要闻' },
-  opportunity: { label: '今日机会', icon: '🔥', desc: '利好催化 + 打新日历' },
+  tips: { label: '交易提示', icon: '📅', desc: '今日打新 + 投资日历' },
 };
 
 function OrderPanel() {
@@ -561,12 +569,20 @@ function findStock(list: { code: string; name: string }[], query: string) {
 }
 
 function matchSection(text: string): SectionOrderItem['id'] | null {
+  if (text.match(/(温度|市场温度|盘前)/)) return 'temperature';
   if (text.match(/(自选股|自选|关注)/)) return 'stock';
+  if (text.match(/(机会|利好|催化)/)) return 'opportunity';
   if (text.match(/(要闻|新闻|外盘)/)) return 'news';
-  if (text.match(/(机会|利好|催化|打新)/)) return 'opportunity';
+  if (text.match(/(交易提示|提示|打新|日历)/)) return 'tips';
   return null;
 }
 
 function labelOf(id: SectionOrderItem['id']): string {
-  return { stock: '自选股', news: '重磅要闻', opportunity: '今日机会' }[id];
+  return {
+    temperature: '市场温度',
+    stock: '自选股',
+    opportunity: '今日机会',
+    news: '重磅要闻',
+    tips: '交易提示',
+  }[id];
 }

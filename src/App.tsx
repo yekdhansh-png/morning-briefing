@@ -6,6 +6,7 @@ import GlobalMarketCard from './components/GlobalMarketCard';
 import NewsCard from './components/NewsCard';
 import IPOCard from './components/IPOCard';
 import CatalystCard from './components/CatalystCard';
+import CalendarCard from './components/CalendarCard';
 import BottomBar from './components/BottomBar';
 import CustomSheet from './components/CustomSheet';
 import { loadBriefing, defaultBriefing } from './data/briefing';
@@ -34,11 +35,20 @@ export default function App() {
   const renderSection = (sec: SectionOrderItem) => {
     if (!sec.visible) return null;
     switch (sec.id) {
+      case 'temperature':
+        return <HeaderCard key="temperature" />;
       case 'stock':
         return (
           <div key="stock">
             <SectionTitle title="自选动态" />
             <StockSection />
+          </div>
+        );
+      case 'opportunity':
+        return (
+          <div key="opportunity">
+            <SectionTitle title="今日机会" />
+            <CatalystCard />
           </div>
         );
       case 'news':
@@ -51,12 +61,12 @@ export default function App() {
             ))}
           </div>
         );
-      case 'opportunity':
+      case 'tips':
         return (
-          <div key="opportunity">
-            <SectionTitle title="今日机会" />
-            <CatalystCard />
+          <div key="tips">
+            <SectionTitle title="交易提示" />
             <IPOCard />
+            <CalendarCard />
           </div>
         );
       default:
@@ -69,8 +79,6 @@ export default function App() {
       <SheetContext.Provider value={{ open: sheetOpen, setOpen: setSheetOpen }}>
         <div className="min-h-screen w-full" style={{ background: '#F5F5F7' }}>
           <div className="mx-auto max-w-[480px] px-3.5 pt-3 pb-24">
-            <HeaderCard />
-
             {prefs.sectionOrder.map(renderSection)}
 
             {/* 免责声明 */}

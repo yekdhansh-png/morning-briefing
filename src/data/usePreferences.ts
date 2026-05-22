@@ -8,7 +8,8 @@ export interface WatchItem {
 }
 
 export interface SectionOrderItem {
-  id: 'stock' | 'news' | 'opportunity'; // 自选股 / 重磅要闻 / 今日机会
+  // temperature 市场温度 / stock 自选股 / opportunity 今日机会 / news 重磅要闻 / tips 交易提示
+  id: 'temperature' | 'stock' | 'opportunity' | 'news' | 'tips';
   visible: boolean;
 }
 
@@ -17,13 +18,17 @@ export interface Preferences {
   sectionOrder: SectionOrderItem[];
 }
 
+const DEFAULT_SECTION_IDS: SectionOrderItem['id'][] = [
+  'temperature',
+  'stock',
+  'opportunity',
+  'news',
+  'tips',
+];
+
 const DEFAULT_PREFERENCES: Preferences = {
   watchlist: [],
-  sectionOrder: [
-    { id: 'stock', visible: true },
-    { id: 'news', visible: true },
-    { id: 'opportunity', visible: true },
-  ],
+  sectionOrder: DEFAULT_SECTION_IDS.map((id) => ({ id, visible: true })),
 };
 
 const KEY = 'briefing-preferences';
@@ -33,12 +38,25 @@ function load(): Preferences {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT_PREFERENCES;
     const parsed = JSON.parse(raw);
+
+    // 智能合并 sectionOrder：保留旧顺序，补齐缺失项，过滤掉已废弃 id
+    let order: SectionOrderItem[] = Array.isArray(parsed.sectionOrder)
+      ? parsed.sectionOrder.filter(
+          (s: SectionOrderItem) =>
+            s && DEFAULT_SECTION_IDS.includes(s.id),
+        )
+      : [];
+    // 补齐缺失项（按默认顺序的相对位置追加）
+    for (const id of DEFAULT_SECTION_IDS) {
+      if (!order.some((s) => s.id === id)) {
+        const defaultIdx = DEFAULT_SECTION_IDS.indexOf(id);
+        order.splice(defaultIdx, 0, { id, visible: true });
+      }
+    }
+
     return {
       watchlist: Array.isArray(parsed.watchlist) ? parsed.watchlist : [],
-      sectionOrder:
-        Array.isArray(parsed.sectionOrder) && parsed.sectionOrder.length === 3
-          ? parsed.sectionOrder
-          : DEFAULT_PREFERENCES.sectionOrder,
+      sectionOrder: order,
     };
   } catch {
     return DEFAULT_PREFERENCES;
