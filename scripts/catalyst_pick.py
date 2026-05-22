@@ -352,7 +352,7 @@ def pick_top2_catalysts(
             system_prompt=SYSTEM_PROMPT,
             user_prompt=user_prompt,
             temperature=0.3,
-            max_tokens=1200,
+            max_tokens=2000,
         )
     except LLMError as e:
         print(f"[catalyst_pick] LLM 失败: {e}", file=sys.stderr)

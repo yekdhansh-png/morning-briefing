@@ -77,13 +77,13 @@ export interface CatalystItem {
   content?: string;
   // 新字段（LLM 输出）
   concept?: string;          // 概念名 ≤6 字
-  tag?: string;              // 4 字标签：政策落地/巨头确认/涨价信号 等
+  tag?: string;              // 4 字标签
   event?: string;            // 1 句话事件 ≤25 字
   catalystPath?: string;     // 1 句话催化路径 ≤25 字
   event_level?: 'S' | 'A' | 'B' | 'C' | 'D';
   fundamental_signal?: string;
   catalyst?: string;
-  reason?: string;           // 整体看好理由
+  reason?: string;
   source_section?: string;
   source_title?: string;
   stocks: CatalystStock[];
