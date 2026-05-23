@@ -1,74 +1,105 @@
-import type { CatalystItem } from '../data/briefing';
+import type { CatalystItem, CatalystStock } from '../data/briefing';
 import { useBriefing } from '../data/BriefingContext';
+
+const LEVEL_BADGE: Record<string, { bg: string; color: string; label: string }> = {
+  S: { bg: '#FEE2E2', color: '#B91C1C', label: 'S级' },
+  A: { bg: '#FEF3C7', color: '#92400E', label: 'A级' },
+  B: { bg: '#DBEAFE', color: '#1E40AF', label: 'B级' },
+  C: { bg: '#E0E7FF', color: '#3730A3', label: 'C级' },
+  D: { bg: '#F3F4F6', color: '#374151', label: 'D级' },
+};
+
+function StockItem({ stock }: { stock: CatalystStock }) {
+  const reason = stock.reason || (stock as unknown as { desc?: string }).desc || '';
+  return (
+    <div
+      className="flex items-start gap-2.5 py-2 border-b last:border-b-0 last:pb-0"
+      style={{ borderColor: '#F2F2F2' }}
+    >
+      {/* 左：name / code / role 竖排 */}
+      <div className="shrink-0" style={{ minWidth: 76 }}>
+        <div className="text-[13.5px] font-bold text-[#1f1f23] leading-tight">{stock.name}</div>
+        {stock.code && (
+          <div className="text-[10.5px] text-gray-400 mt-0.5 leading-none">{stock.code}</div>
+        )}
+        {stock.role && (
+          <span
+            className="inline-block text-[10px] mt-1 px-1.5 py-[1px] rounded font-semibold leading-none"
+            style={{ color: '#E54D42', background: '#FFF5F4' }}
+          >
+            {stock.role}
+          </span>
+        )}
+      </div>
+      {/* 右：reason */}
+      <p className="flex-1 text-[12px] leading-[1.7] text-[#555] pt-[1px]">{reason}</p>
+    </div>
+  );
+}
 
 function CatalystBlock({ item }: { item: CatalystItem }) {
   const concept = item.concept || item.sector || '';
   const tag = item.tag || item.title || '机构热评';
+  const event = item.event || '';
   const catalyst = item.catalyst || item.content || '';
+  const level = item.event_level;
+  const levelStyle = level ? LEVEL_BADGE[level] : null;
 
   return (
-    <div className="mb-4 last:mb-0">
-      {/* 顶部行：左概念 chip + 右标签 */}
-      <div className="flex items-center justify-between mb-2">
-        <span
-          className="inline-flex items-center text-[12.5px] px-2.5 h-[24px] rounded-md font-bold text-white"
-          style={{ background: '#E54D42' }}
-        >
-          {concept}
-        </span>
-        <span
-          className="inline-flex items-center text-[12px] font-bold"
-          style={{ color: '#E54D42' }}
-        >
-          <span className="mr-1">⚡</span>
-          {tag}
-        </span>
-      </div>
-
-      {/* 浅粉卡：仅 catalyst 主文 */}
-      <div
-        className="rounded-lg px-3 py-2.5"
-        style={{ background: '#FFF5F4' }}
-      >
-        {catalyst && (
-          <p className="text-[12.5px] leading-[1.75] text-[#3a3a3a]">{catalyst}</p>
+    <div
+      className="bg-white rounded-2xl mb-3 last:mb-0 overflow-hidden"
+      style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}
+    >
+      {/* 顶部 meta：弱化的板块 + 标签 + 等级 */}
+      <div className="flex items-center gap-1.5 px-3.5 pt-3">
+        <span className="text-[10.5px] text-[#555] font-semibold">{concept}</span>
+        <span className="w-[3px] h-[3px] rounded-full bg-gray-300" />
+        <span className="text-[10.5px] text-gray-400">{tag}</span>
+        {levelStyle && (
+          <span
+            className="ml-auto text-[10px] px-1.5 py-[2px] rounded font-bold leading-none"
+            style={{ background: levelStyle.bg, color: levelStyle.color }}
+          >
+            {levelStyle.label}
+          </span>
         )}
       </div>
 
+      {/* 大字事件标题（最突出） */}
+      {event && (
+        <div className="px-3.5 pt-1.5 text-[16.5px] font-bold leading-[1.45] text-[#1f1f23] tracking-tight">
+          {event}
+        </div>
+      )}
+
+      {/* 催化逻辑：纯文段 + 虚线分隔 */}
+      {catalyst && (
+        <div
+          className="px-3.5 pt-2 pb-3.5 text-[12.5px] leading-[1.7] text-[#555] border-b border-dashed"
+          style={{ borderColor: '#EFEFEF' }}
+        >
+          {catalyst}
+        </div>
+      )}
+
       {/* 受益股 */}
-      <div className="mt-2.5 space-y-2">
-        {item.stocks.map((s) => {
-          const reason = s.reason || (s as unknown as { desc?: string }).desc || '';
-          return (
-            <div key={s.name} className="flex items-start">
-              <span
-                className="shrink-0 inline-flex items-center text-[11.5px] px-2 h-[22px] rounded border mr-2 font-semibold"
-                style={{ color: '#E54D42', borderColor: '#F5C9C5', background: '#FFFFFF' }}
-              >
-                {s.name}
-              </span>
-              <p className="flex-1 text-[12.5px] leading-[1.7] text-[#333] pt-[2px]">{reason}</p>
-            </div>
-          );
-        })}
+      <div className="px-3.5 py-2.5">
+        {item.stocks.map((s) => (
+          <StockItem key={s.code || s.name} stock={s} />
+        ))}
       </div>
     </div>
   );
 }
 
 /**
- * 利好催化卡片
+ * 利好催化卡片（V2 极简版：事件优先 + 弱化标签 + 股票分块）
  */
 export default function CatalystCard() {
   const { catalyst: catalystList } = useBriefing();
   if (!catalystList || catalystList.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl shadow-card p-4 mb-3">
-      <div className="flex items-center mb-3">
-        <span className="text-[16px] mr-1.5">🔥</span>
-        <span className="text-[15px] font-bold text-[#1f1f23]">利好催化</span>
-      </div>
-
+    <div>
       {catalystList.map((item, idx) => (
         <CatalystBlock key={item.concept || item.sector || idx} item={item} />
       ))}
