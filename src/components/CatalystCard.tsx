@@ -67,21 +67,26 @@ function CatalystBlock({ item }: { item: CatalystItem }) {
 
       {/* 事件 + 催化摘要：一段连贯文字，2 行硬截断（不显示省略号） */}
       {(event || catalyst) && (
-        <p
-          className="px-3.5 pt-1.5 pb-3.5 text-[13px] leading-[1.6] text-[#333] border-b border-dashed"
-          style={{
-            borderColor: '#EFEFEF',
-            display: '-webkit-box',
-            WebkitBoxOrient: 'vertical',
-            WebkitLineClamp: 2,
-            overflow: 'hidden',
-            textOverflow: 'clip',
-          }}
+        <div
+          className="px-3.5 pt-1.5 pb-3.5 border-b border-dashed"
+          style={{ borderColor: '#EFEFEF' }}
         >
-          {event}
-          {event && catalyst ? '。' : ''}
-          {catalyst}
-        </p>
+          <p
+            className="text-[13px] leading-[1.6] text-[#333] m-0"
+            style={{
+              display: '-webkit-box',
+              WebkitBoxOrient: 'vertical',
+              WebkitLineClamp: 2,
+              overflow: 'hidden',
+              textOverflow: 'clip',
+              maxHeight: 'calc(13px * 1.6 * 2)',
+            }}
+          >
+            {event}
+            {event && catalyst ? '。' : ''}
+            {catalyst}
+          </p>
+        </div>
       )}
 
       {/* 受益股 */}
