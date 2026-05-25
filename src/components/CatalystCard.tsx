@@ -65,11 +65,18 @@ function CatalystBlock({ item }: { item: CatalystItem }) {
         )}
       </div>
 
-      {/* 事件 + 催化摘要：一段连贯文字，统一字号字重 */}
+      {/* 事件 + 催化摘要：一段连贯文字，2 行硬截断（不显示省略号） */}
       {(event || catalyst) && (
         <p
           className="px-3.5 pt-1.5 pb-3.5 text-[13px] leading-[1.6] text-[#333] border-b border-dashed"
-          style={{ borderColor: '#EFEFEF' }}
+          style={{
+            borderColor: '#EFEFEF',
+            display: '-webkit-box',
+            WebkitBoxOrient: 'vertical',
+            WebkitLineClamp: 2,
+            overflow: 'hidden',
+            textOverflow: 'clip',
+          }}
         >
           {event}
           {event && catalyst ? '。' : ''}
