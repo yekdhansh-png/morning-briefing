@@ -65,20 +65,21 @@ function CatalystBlock({ item }: { item: CatalystItem }) {
         )}
       </div>
 
-      {/* 大字事件标题（最突出） */}
-      {event && (
-        <div className="px-3.5 pt-1.5 text-[16.5px] font-bold leading-[1.45] text-[#1f1f23] tracking-tight">
-          {event}
-        </div>
-      )}
-
-      {/* 催化逻辑：纯文段 + 虚线分隔 */}
-      {catalyst && (
+      {/* 事件标题 + 催化逻辑摘要：合二为一的连贯段落 */}
+      {(event || catalyst) && (
         <div
-          className="px-3.5 pt-2 pb-3.5 text-[12.5px] leading-[1.7] text-[#555] border-b border-dashed"
+          className="px-3.5 pt-1.5 pb-3.5 border-b border-dashed"
           style={{ borderColor: '#EFEFEF' }}
         >
-          {catalyst}
+          {event && (
+            <strong className="text-[14.5px] font-bold leading-[1.55] text-[#1f1f23] tracking-tight mr-1.5">
+              {event}
+              {catalyst ? '。' : ''}
+            </strong>
+          )}
+          {catalyst && (
+            <span className="text-[13px] leading-[1.7] text-[#555]">{catalyst}</span>
+          )}
         </div>
       )}
 
