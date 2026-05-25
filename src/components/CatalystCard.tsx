@@ -65,7 +65,7 @@ function CatalystBlock({ item }: { item: CatalystItem }) {
         )}
       </div>
 
-      {/* 事件 + 催化摘要：一段连贯文字，2 行硬截断（不显示省略号） */}
+      {/* 事件 + 催化摘要：一段连贯文字，2 行硬截断（max-height 裁剪，不显示省略号） */}
       {(event || catalyst) && (
         <div
           className="px-3.5 pt-1.5 pb-3.5 border-b border-dashed"
@@ -74,12 +74,8 @@ function CatalystBlock({ item }: { item: CatalystItem }) {
           <p
             className="text-[13px] leading-[1.6] text-[#333] m-0"
             style={{
-              display: '-webkit-box',
-              WebkitBoxOrient: 'vertical',
-              WebkitLineClamp: 2,
-              overflow: 'hidden',
-              textOverflow: 'clip',
               maxHeight: 'calc(13px * 1.6 * 2)',
+              overflow: 'hidden',
             }}
           >
             {event}
