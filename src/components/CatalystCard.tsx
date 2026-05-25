@@ -65,22 +65,22 @@ function CatalystBlock({ item }: { item: CatalystItem }) {
         )}
       </div>
 
-      {/* 事件标题 + 催化逻辑摘要：合二为一的连贯段落 */}
+      {/* 事件 + 催化摘要：一段连贯文字，统一字号字重，最多 2 行 */}
       {(event || catalyst) && (
-        <div
-          className="px-3.5 pt-1.5 pb-3.5 border-b border-dashed"
-          style={{ borderColor: '#EFEFEF' }}
+        <p
+          className="px-3.5 pt-1.5 pb-3.5 text-[13px] leading-[1.6] text-[#333] border-b border-dashed"
+          style={{
+            borderColor: '#EFEFEF',
+            display: '-webkit-box',
+            WebkitBoxOrient: 'vertical',
+            WebkitLineClamp: 2,
+            overflow: 'hidden',
+          }}
         >
-          {event && (
-            <strong className="text-[14.5px] font-bold leading-[1.55] text-[#1f1f23] tracking-tight mr-1.5">
-              {event}
-              {catalyst ? '。' : ''}
-            </strong>
-          )}
-          {catalyst && (
-            <span className="text-[13px] leading-[1.7] text-[#555]">{catalyst}</span>
-          )}
-        </div>
+          {event}
+          {event && catalyst ? '。' : ''}
+          {catalyst}
+        </p>
       )}
 
       {/* 受益股 */}
