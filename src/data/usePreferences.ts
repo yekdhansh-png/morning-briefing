@@ -26,8 +26,14 @@ const DEFAULT_SECTION_IDS: SectionOrderItem['id'][] = [
   'tips',
 ];
 
+const DEFAULT_WATCHLIST: WatchItem[] = [
+  { name: '贵州茅台', code: 'sh600519' },
+  { name: '宁德时代', code: 'sz300750' },
+  { name: '中际旭创', code: 'sz300308' },
+];
+
 const DEFAULT_PREFERENCES: Preferences = {
-  watchlist: [],
+  watchlist: DEFAULT_WATCHLIST,
   sectionOrder: DEFAULT_SECTION_IDS.map((id) => ({ id, visible: true })),
 };
 

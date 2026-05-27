@@ -1,97 +1,52 @@
+import { useBriefing } from '../data/BriefingContext';
+
 /**
- * 投资日历卡片（写死版本）
- * 未来接 jin10 财经日历 / 国内宏观日历
+ * 财经日历（极简 mock）
+ * - 上限 2 条
+ * - 每条：时间 + 事件 + 可选 chip（关注 / 我的自选）
  */
-
-interface CalendarEvent {
-  time: string;       // "今日 09:30" / "今日 22:00"
-  region: '中' | '美' | '欧' | '日';
-  title: string;
-  importance: 'high' | 'mid' | 'low';
-}
-
-const MOCK_EVENTS: CalendarEvent[] = [
-  { time: '09:30', region: '中', title: '央行公开市场操作', importance: 'mid' },
-  { time: '10:00', region: '中', title: '1 年期 LPR 公布', importance: 'high' },
-  { time: '20:30', region: '美', title: '初请失业金人数', importance: 'mid' },
-  { time: '22:00', region: '美', title: '美联储官员讲话（鲍威尔）', importance: 'high' },
-];
-
-const REGION_STYLE: Record<CalendarEvent['region'], { bg: string; color: string }> = {
-  中: { bg: '#FEF2F2', color: '#E54D42' },
-  美: { bg: '#EFF6FF', color: '#3B82F6' },
-  欧: { bg: '#FEF3C7', color: '#92400E' },
-  日: { bg: '#F3F4F6', color: '#4B5563' },
-};
-
-const IMPORTANCE_DOTS: Record<CalendarEvent['importance'], number> = {
-  high: 3,
-  mid: 2,
-  low: 1,
-};
-
-function ImportanceDots({ level }: { level: CalendarEvent['importance'] }) {
-  const n = IMPORTANCE_DOTS[level];
-  return (
-    <span className="inline-flex items-center gap-[2px]">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="inline-block rounded-full"
-          style={{
-            width: 5,
-            height: 5,
-            background: i < n ? '#E54D42' : '#E5E7EB',
-          }}
-        />
-      ))}
-    </span>
-  );
-}
-
 export default function CalendarCard() {
-  if (!MOCK_EVENTS.length) return null;
+  const { calendarMock } = useBriefing();
+  const items = (calendarMock || []).slice(0, 2);
+  if (items.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-card p-4 mb-3">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center">
-          <span className="text-[16px] mr-1.5">📅</span>
-          <span className="text-[15px] font-bold text-[#1f1f23]">投资日历</span>
-        </div>
-        <span className="text-[11px] text-gray-400">今日 · 4 个事件</span>
+    <div>
+      <div className="font-bold mb-2 text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
+        今日日历
       </div>
-
-      <div className="space-y-2.5">
-        {MOCK_EVENTS.map((ev, i) => {
-          const rs = REGION_STYLE[ev.region];
-          return (
-            <div key={i} className="flex items-center">
-              {/* 时间 */}
-              <div className="shrink-0 w-[52px] text-[12.5px] font-semibold text-[#1f1f23] tabular-nums">
-                {ev.time}
-              </div>
-              {/* 国家标 */}
-              <span
-                className="shrink-0 text-[10.5px] px-1.5 py-[2px] rounded font-bold leading-none mr-2.5"
-                style={{ background: rs.bg, color: rs.color }}
-              >
-                {ev.region}
+      <ul className="space-y-1.5">
+        {items.map((c, idx) => (
+          <li key={idx} className="flex items-start text-[13px]" style={{ lineHeight: 1.7 }}>
+            <span
+              className="tabular-nums mr-2 mt-[1px] font-bold text-[11.5px]"
+              style={{ color: 'var(--red)' }}
+            >
+              {c.time}
+            </span>
+            <span className="flex-1" style={{ color: 'var(--ink)' }}>
+              {c.highlight ? (
+                // 自选高亮：股票名加粗
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: c.event.replace(
+                      /([\u4e00-\u9fa5]+)(?=\s*披露|\s*发布|\s*公告)/,
+                      '<b>$1</b>',
+                    ),
+                  }}
+                />
+              ) : (
+                c.event
+              )}
+            </span>
+            {c.tag && (
+              <span className={`chip ${c.tag === '我的自选' ? 'chip-gold' : 'chip-info'} ml-1`}>
+                {c.tag}
               </span>
-              {/* 事件 */}
-              <div className="flex-1 min-w-0 text-[12.5px] text-[#333] truncate">{ev.title}</div>
-              {/* 重要性 */}
-              <div className="shrink-0 ml-2">
-                <ImportanceDots level={ev.importance} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="text-center text-[11px] text-gray-400 mt-3 pt-2 border-t border-gray-100">
-        数据待接入 · 即将支持真实日历
-      </div>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

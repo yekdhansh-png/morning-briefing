@@ -1,179 +1,90 @@
-import { useState } from 'react';
 import type { NewsItem } from '../data/briefing';
 
 interface NewsCardProps {
   data: NewsItem;
 }
 
-function StrengthBar({ level }: { level: '强' | '中' | '弱' }) {
-  // 5 段虚线递进：弱=前 2 格 / 中=前 3 格 / 强=全 5 格
-  const litCountMap: Record<string, number> = {
-    弱: 2,
-    中: 3,
-    强: 5,
-  };
-  const litCount = litCountMap[level] ?? 3;
-  return (
-    <div className="flex items-center justify-end gap-1.5">
-      <div className="flex items-center gap-[5px]">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            style={{
-              width: 10,
-              height: 2,
-              borderRadius: 1,
-              background: i < litCount ? '#E54D42' : '#E5C9C7',
-            }}
-          />
-        ))}
-      </div>
-      <span className="text-[13px] font-bold leading-none ml-1" style={{ color: '#E54D42' }}>
-        {level}
-      </span>
-    </div>
-  );
-}
-
-function ChevronDown({ rotated }: { rotated: boolean }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#E54D42"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{
-        transition: 'transform 0.2s ease',
-        transform: rotated ? 'rotate(180deg)' : 'rotate(0deg)',
-      }}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
-
+/**
+ * 重磅要闻卡片（减法版）
+ * - 序号 01 + 标题同行
+ * - 标签独立成行（板块·方向）
+ * - 信号区灰底 + 右侧下拉三角（点击展开 signalDetails）
+ * - signalDetails 已由 LLM 输出（{tag, content}[]），前端直接 map
+ */
 export default function NewsCard({ data }: NewsCardProps) {
-  const { no, title, signal, signalDetails, affectedIcon, affectedName, affectedDirection, strength } =
-    data;
-  const [expanded, setExpanded] = useState(false);
-
-  const directionPositive = affectedDirection === '正面';
+  const { no, title, signal, signalDetails, affectedName, affectedDirection } = data;
+  const directionLabel = affectedDirection === '正面' ? '利多' : '利空';
+  const details = signalDetails && signalDetails.length > 0 ? signalDetails : [];
 
   return (
-    <div
-      className="bg-white rounded-2xl p-4 mb-3"
-      style={{ boxShadow: '0 2px 10px rgba(20, 24, 40, 0.04), 0 1px 2px rgba(20, 24, 40, 0.04)' }}
-    >
-      {/* 标题行：NO.XX 徽章 + 标题 */}
-      <div className="flex items-start">
-        <div
-          className="shrink-0 mr-3 rounded-lg text-center text-white py-1.5 px-1"
-          style={{
-            background: 'linear-gradient(180deg, #F05548 0%, #E54D42 100%)',
-            minWidth: 42,
-            boxShadow: '0 2px 6px rgba(229, 77, 66, 0.25)',
-          }}
+    <div className="px-3.5 py-3 border-b last:border-b-0" style={{ borderColor: 'var(--line)' }}>
+      {/* 行 1：序号 + 标题 */}
+      <div className="flex items-start mb-1.5">
+        <span
+          className="font-bold tabular-nums mr-2 text-[13px]"
+          style={{ lineHeight: 1.65, color: 'var(--red)' }}
         >
-          <div className="text-[9px] font-bold leading-none tracking-[0.08em]">NO.</div>
-          <div className="text-[20px] font-extrabold leading-none mt-1">{no}</div>
-        </div>
-        <h3 className="text-[15.5px] font-bold leading-[1.55] text-[#1f1f23] flex-1 pt-0.5">
+          {no}
+        </span>
+        <p
+          className="font-medium m-0 flex-1 text-[13px]"
+          style={{ lineHeight: 1.65 }}
+        >
           {title}
-        </h3>
+        </p>
       </div>
 
-      {/* 核心信号（可展开） */}
-      <div
-        className="mt-3 rounded-xl border-l-[3px] overflow-hidden"
-        style={{ background: '#FFF1F0', borderLeftColor: '#E54D42' }}
-      >
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="w-full p-3 text-left relative"
-        >
-          {/* 用纯文本流让第二行回到容器最左 */}
-          <p className="text-[12.5px] leading-[1.75] text-[#5a2a26] pr-6">
-            <span className="font-bold mr-1.5" style={{ color: '#E54D42' }}>
-              核心信号
-            </span>
-            <span className="mr-1.5" style={{ color: '#E54D42' }}>
-              ·
+      {/* 行 2：标签独立 */}
+      <div className="mb-1.5" style={{ paddingLeft: 22 }}>
+        <span className="chip chip-info">
+          {affectedName} · {directionLabel}
+        </span>
+      </div>
+
+      {/* 行 3：信号灰底 + 折叠（左缩进 22px，与标题正文对齐） */}
+      <div style={{ paddingLeft: 22 }}>
+        {details.length > 0 ? (
+          <details className="fold">
+            <summary
+              className="cursor-pointer select-none rounded px-2.5 py-2 flex items-start text-[13px]"
+              style={{ background: 'var(--surface)', lineHeight: 1.65, color: 'var(--ink-2)' }}
+            >
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold" style={{ color: 'var(--red)' }}>
+                  信号·
+                </span>
+                {signal}
+              </div>
+              <span
+                className="arrow shrink-0 ml-2 mt-[3px] text-[11px]"
+                style={{ color: 'var(--ink-3)' }}
+              >
+                ▾
+              </span>
+            </summary>
+            <div
+              className="px-3 py-2.5 mt-1 rounded space-y-1 text-[12.5px]"
+              style={{ background: 'var(--surface)', lineHeight: 1.75, color: 'var(--ink-2)' }}
+            >
+              {details.map((d, i) => (
+                <div key={i}>
+                  <b style={{ color: 'var(--ink)' }}>{d.tag}·</b>
+                  {d.content}
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : (
+          <div
+            className="rounded px-2.5 py-2 text-[13px]"
+            style={{ background: 'var(--surface)', lineHeight: 1.65, color: 'var(--ink-2)' }}
+          >
+            <span className="font-semibold" style={{ color: 'var(--red)' }}>
+              信号·
             </span>
             {signal}
-          </p>
-          {/* 箭头绝对定位到右上角 */}
-          <span className="absolute right-3 top-3">
-            <ChevronDown rotated={expanded} />
-          </span>
-        </button>
-
-        {expanded && signalDetails && (
-          <div className="px-3 pb-3 pt-0.5 space-y-2">
-            {signalDetails.map((d) => (
-              <p key={d.tag} className="text-[12.5px] leading-[1.85] text-[#5a2a26]">
-                <span
-                  className="text-[11px] px-1.5 py-[3px] rounded-md font-semibold mr-2 align-[1px]"
-                  style={{
-                    background: '#FFD7D3',
-                    color: '#B91C1C',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {d.tag}
-                </span>
-                {d.content}
-              </p>
-            ))}
           </div>
         )}
-      </div>
-
-      {/* 影响资产 / 方向胶囊（居中） / 影响强度 三栏 */}
-      <div
-        className="mt-3 rounded-xl grid items-center px-3 py-2.5"
-        style={{ background: '#F4F5F7', gridTemplateColumns: '1fr auto 1fr' }}
-      >
-        {/* 左：图标 + 板块 */}
-        <div className="flex items-center">
-          <span
-            className="shrink-0 inline-flex items-center justify-center rounded-lg mr-2.5"
-            style={{ background: '#FFFFFF', width: 32, height: 32 }}
-          >
-            <span className="text-[16px]">{affectedIcon}</span>
-          </span>
-          <div>
-            <div className="text-[10.5px] text-gray-500 leading-none">影响资产</div>
-            <div className="text-[14px] font-bold mt-1.5 text-[#1f1f23] leading-none">
-              {affectedName}
-            </div>
-          </div>
-        </div>
-        {/* 中：方向胶囊（左右居中） */}
-        <div className="flex justify-center">
-          <span
-            className="inline-flex items-center justify-center text-[11.5px] px-2.5 rounded-full font-bold"
-            style={{
-              background: directionPositive ? '#E54D42' : '#1FAE6F',
-              color: '#fff',
-              height: 22,
-              lineHeight: 1,
-            }}
-          >
-            {directionPositive ? '↑' : '↓'}&nbsp;{affectedDirection}
-          </span>
-        </div>
-        {/* 右：强度 */}
-        <div className="text-right">
-          <div className="text-[10.5px] text-gray-500 leading-none">影响强度</div>
-          <div className="mt-2">
-            <StrengthBar level={strength} />
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -54,8 +54,26 @@ export interface IPOItem {
   price: string;
   industry: string;
   estProfit: string;       // 预估收益 ¥18,500
-  estPct: string;          // (+48%)
+  estPct: string;          // (+48%) — 已不显示，仅保留兼容
   highlight: string;
+}
+
+// 自选股动态（mock）
+export interface WatchStockMock {
+  name: string;
+  code: string;            // 不带前缀，如 "600519"
+  newsTag: string;         // chip 文字，如 "重要提醒"
+  news: string;            // 隔夜新闻摘要
+  question: string;        // 问元宝的预生成问题
+  answer: string;          // 元宝的预生成答案
+}
+
+// 日历事件（mock）
+export interface CalendarItem {
+  time: string;            // "14:30" / "盘后" / "21:00"
+  event: string;           // 事件描述
+  tag?: '关注' | '我的自选'; // 可选 chip
+  highlight?: boolean;     // 是否高亮（自选股相关）
 }
 
 export interface CatalystStock {
@@ -121,6 +139,8 @@ export interface BriefingData {
   disclaimer: string;
   generatedBy: string;
   customPlan: CustomPlan;
+  watchMock?: WatchStockMock[];      // 自选动态 mock
+  calendarMock?: CalendarItem[];     // 日历 mock
 }
 
 // 默认 mock 数据（fallback）
@@ -133,7 +153,7 @@ export const defaultBriefing: BriefingData = {
     tempLabel: '市场温度',
     tempStatus: '火热',
     paragraph:
-      '外部环境缓和叠加 AI 产业落地与贵金属共振新高，A 股风险偏好显著抬升，今日大概率高开高走。资金有望沿科技与有色双主线扩散，权重搭台、题材唱戏的格局可期，但需警惕高位品种盘中冲高回落与情绪过热分化。',
+      '今日大概率高开高走，外盘 AI 链 + 黄金双双新高强势映射，叠加国内 Token 算力商业化加速，权重搭台、题材唱戏；警惕高位品种盘中冲高回落。',
   },
   stocks: [
     {
@@ -203,7 +223,7 @@ export const defaultBriefing: BriefingData = {
     { name: 'WTI原油', value: '69.85', change: '-1.76%', up: false },
   ],
   globalSummary:
-    '全球呈现"股强、贵金属强、原油弱"的组合。美股 AI 链领涨叠加美联储降息预期升温，金铜共振走强，对 A 股风险偏好与有色、AI 算力板块构成正向映射，石化短期承压。',
+    '外盘呈现"美股小幅回调、金银走强、原油承压"组合，避险与降息预期升温，A 股有色金属、AI 算力或受正向映射，石化板块短期承压。',
   news: [
     {
       no: '01',
@@ -340,17 +360,84 @@ export const defaultBriefing: BriefingData = {
     riskPref: '稳健型',
     pushTime: '07:30 每日推送',
   },
+  watchMock: [
+    {
+      name: '贵州茅台',
+      code: '600519',
+      newsTag: '重要提醒',
+      news: '公司公告控股股东拟年内增持不低于 3 亿元，叠加中秋动销超预期，机构上调全年盈利预测。',
+      question: '增持公告对短期股价支撑有多强？',
+      answer:
+        '控股股东 3 亿元增持金额相当于公司近 5 日成交额的 4%，属于"信号意义大于实际承接力"的范畴。从历史规律看，茅台过去 3 次增持后 20 日平均跑赢沪深 300 约 4 个百分点；叠加本次时点正好对应中秋动销超预期，预计短期股价有 3-5% 的修复空间，但持续性还要看 Q4 真实出货数据。',
+    },
+    {
+      name: '宁德时代',
+      code: '300750',
+      newsTag: '重要提醒',
+      news: '欧洲电池新规落地，CATL 海外产能配套加速，与 Stellantis 西班牙工厂 Q4 投产时间提前。',
+      question: '海外产能加速对 2026 年业绩贡献多大？',
+      answer:
+        '西班牙工厂规划产能 50 GWh，按 Q4 投产 + 爬坡节奏，2026 全年贡献约 25-30 GWh 出货增量，对应营收增量约 200 亿元。考虑海外毛利率（约 22%）显著高于国内（约 17%），有望带动 2026 年归母净利润额外增厚 5-7%。但需注意欧洲新规对本地化采购比例的要求可能压缩部分议价空间。',
+    },
+    {
+      name: '中际旭创',
+      code: '300308',
+      newsTag: '重要提醒',
+      news: '英伟达 GTC 确认 GB300 平台 1.6T 光模块用量翻倍至 144 个，机柜 BOM 价值量大幅提升。',
+      question: '1.6T 用量翻倍能让单季利润提升多少？',
+      answer:
+        '按 GB300 单机柜 144 个 1.6T 光模块、单价约 1,500 美元测算，单机柜光模块价值量约 21.6 万美元，较 GB200 平台翻倍。中际旭创全球份额约 30%，若 2026 H1 GB300 出货 5,000 机柜，对应公司光模块新增收入约 23 亿元，按 25% 净利率估算可贡献单季利润增量约 5.7 亿元，相当于现有单季利润的 25% 左右。',
+    },
+  ],
+  calendarMock: [
+    { time: '14:30', event: '中国 5 月 LPR 报价', tag: '关注' },
+    { time: '盘后', event: '宁德时代 披露 2025 年报', tag: '我的自选', highlight: true },
+  ],
 };
 
 /**
  * 运行时加载 briefing.json
+ * - 默认走纯 mock（USE_MOCK=true），不 fetch 远端，保证视觉稳定
+ * - 想接真实数据：在 .env / 构建参数里设 VITE_USE_MOCK=false
+ * - 远端模式下，缺失字段（watchMock / calendarMock / ipo.list / globalSummary 空）
+ *   会用 defaultBriefing 兜底
  */
+const USE_MOCK =
+  (import.meta.env.VITE_USE_MOCK ?? 'true').toString().toLowerCase() !== 'false';
+
 export async function loadBriefing(): Promise<BriefingData> {
+  // 纯 mock 模式：直接返回 defaultBriefing，不发请求
+  if (USE_MOCK) {
+    // eslint-disable-next-line no-console
+    console.info('[briefing] USE_MOCK=true，使用本地 mock 数据');
+    return defaultBriefing;
+  }
+
   const url = `${import.meta.env.BASE_URL}briefing.json`;
   try {
     const res = await fetch(url, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as BriefingData;
+    const remote = (await res.json()) as BriefingData;
+
+    // 合并 mock 字段兜底
+    return {
+      ...remote,
+      watchMock: remote.watchMock && remote.watchMock.length > 0
+        ? remote.watchMock
+        : defaultBriefing.watchMock,
+      calendarMock: remote.calendarMock && remote.calendarMock.length > 0
+        ? remote.calendarMock
+        : defaultBriefing.calendarMock,
+      ipo:
+        remote.ipo && remote.ipo.list && remote.ipo.list.length > 0
+          ? remote.ipo
+          : defaultBriefing.ipo,
+      // globalSummary 为空时用 mock 兜底，先保证前端解读区有内容
+      globalSummary:
+        remote.globalSummary && remote.globalSummary.trim().length > 0
+          ? remote.globalSummary
+          : defaultBriefing.globalSummary,
+    };
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('[briefing] 加载失败，使用 fallback:', err);

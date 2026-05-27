@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import HeaderCard from './components/HeaderCard';
 import SectionTitle from './components/SectionTitle';
-import StockSection from './components/StockSection';
+import WatchSection from './components/WatchSection';
 import GlobalMarketCard from './components/GlobalMarketCard';
 import NewsCard from './components/NewsCard';
 import IPOCard from './components/IPOCard';
@@ -41,7 +41,7 @@ export default function App() {
         return (
           <div key="stock">
             <SectionTitle title="自选动态" />
-            <StockSection />
+            <WatchSection />
           </div>
         );
       case 'opportunity':
@@ -56,17 +56,31 @@ export default function App() {
           <div key="news">
             <SectionTitle title="重磅要闻" />
             <GlobalMarketCard />
-            {data.news.map((n) => (
-              <NewsCard key={n.no} data={n} />
-            ))}
+            {data.news.length > 0 && (
+              <div
+                className="bg-white rounded-2xl overflow-hidden mb-3"
+                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+              >
+                {data.news.map((n) => (
+                  <NewsCard key={n.no} data={n} />
+                ))}
+              </div>
+            )}
           </div>
         );
       case 'tips':
         return (
           <div key="tips">
             <SectionTitle title="交易提示" />
-            <IPOCard />
-            <CalendarCard />
+            <div
+              className="bg-white rounded-2xl p-3 mb-3"
+              style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+            >
+              <CalendarCard />
+              <div className="pt-3 border-t" style={{ borderColor: 'var(--line)' }}>
+                <IPOCard />
+              </div>
+            </div>
           </div>
         );
       default:

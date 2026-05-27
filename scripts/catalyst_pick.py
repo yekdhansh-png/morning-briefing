@@ -362,7 +362,61 @@ def pick_top2_catalysts(
     top2 = result.get("top2") or []
     # tag 白名单兜底
     top2 = [_normalize_tag(c) for c in top2[:2]]
+    # 字数兜底：event/catalyst/reason 字数修复
+    top2 = [_fix_lengths(c) for c in top2]
     return top2
+
+
+def _fix_lengths(catalyst: dict) -> dict:
+    """字数兜底：
+    - 如果 event < 30 字且 catalyst > 30 字，把 catalyst 里的内容合并/换到 event
+    - event 截断到 ≤55 字（防止 LLM 超长）
+    - 个股 reason 截断到 ≤35 字（保持一行半内）
+    """
+    event = (catalyst.get("event") or "").strip()
+    cat = (catalyst.get("catalyst") or "").strip()
+
+    # 如果 event 太短而 catalyst 有内容，则把 catalyst 用作 event
+    if len(event) < 30 and len(cat) > len(event):
+        # 截取 catalyst 前 50 字作为 event
+        if len(cat) <= 55:
+            event = cat
+        else:
+            # 截到 50 字，并尝试在标点处断
+            cut = cat[:55]
+            for punct in ["。", "；", "，", " "]:
+                idx = cut.rfind(punct, 30)
+                if idx > 0:
+                    cut = cut[:idx]
+                    break
+            event = cut.rstrip("，；,。 ")
+        catalyst["event"] = event
+        catalyst["catalyst"] = ""  # 清掉，避免前端拼接重复
+
+    # event 超长截断
+    if len(event) > 55:
+        cut = event[:55]
+        for punct in ["。", "；", "，"]:
+            idx = cut.rfind(punct, 35)
+            if idx > 0:
+                cut = cut[:idx]
+                break
+        catalyst["event"] = cut.rstrip("，；,。 ")
+        catalyst["catalyst"] = ""
+
+    # 个股 reason 字数控制
+    for stock in catalyst.get("stocks", []) or []:
+        reason = (stock.get("reason") or "").strip()
+        if len(reason) > 35:
+            cut = reason[:35]
+            for punct in ["。", "，", "；"]:
+                idx = cut.rfind(punct, 20)
+                if idx > 0:
+                    cut = cut[:idx]
+                    break
+            stock["reason"] = cut.rstrip("，；,。 ")
+
+    return catalyst
 
 
 # 6 个允许的标签

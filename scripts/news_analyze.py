@@ -155,6 +155,18 @@ def analyze_one(news: dict) -> dict:
     if result.get("strength") not in ("强", "中", "弱"):
         result["strength"] = "中"
 
+    # signal 字数兜底：限制 ≤55 字（前端最佳显示是 40-50 字）
+    signal = (result.get("signal") or "").strip()
+    if len(signal) > 55:
+        cut = signal[:55]
+        for punct in ["。", "；", "，"]:
+            idx = cut.rfind(punct, 35)
+            if idx > 0:
+                cut = cut[:idx]
+                break
+        signal = cut.rstrip("，；,。 ")
+        result["signal"] = signal
+
     # signalDetails 严格三段
     details = result.get("signalDetails") or []
     if len(details) > 3:

@@ -6,19 +6,18 @@ interface SectionTitleProps {
 }
 
 /**
- * 区块标题：红色竖条 + 黑色加粗
+ * 模块标题：纯文字（去掉左侧红块），右侧灰字 extra 可选
  */
 export default function SectionTitle({ title, extra }: SectionTitleProps) {
   return (
-    <div className="flex items-center justify-between mt-5 mb-3 px-1">
-      <div className="flex items-center">
-        <span
-          className="inline-block w-1 h-4 rounded-sm mr-2"
-          style={{ background: '#E54D42' }}
-        />
-        <span className="text-[17px] font-bold text-[#1f1f23] tracking-wide">{title}</span>
-      </div>
-      {extra}
+    <div className="flex items-baseline mt-4 mb-2 px-1">
+      <span
+        className="font-bold tracking-wide text-[15px]"
+        style={{ color: 'var(--ink)' }}
+      >
+        {title}
+      </span>
+      {extra && <div className="ml-auto">{extra}</div>}
     </div>
   );
 }

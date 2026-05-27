@@ -1,79 +1,113 @@
 import { useBriefing, useSheet } from '../data/BriefingContext';
 
 /**
- * 顶部深色头图卡片（v2）
- * - 右上角"✦ 定制"按钮
- * - 市场温度：左上 ▴ 市场温度 / 右上 火热 / 左下 78°
- * - 段落，去掉关键词 chip 与进度条
+ * Hero 头部 —— 浅蓝晨光紧凑版
+ * - 删英文品牌 / 短金线
+ * - 标题 + 日期同行 / 定制按钮金→红
+ * - 温度卡 inline 横向布局
+ * - 解读：红色 hook + 完整 paragraph
  */
 export default function HeaderCard() {
   const { hero } = useBriefing();
   const { setOpen } = useSheet();
-  const { brand, bigTitle, subTitle, tempValue, tempLabel, tempStatus, paragraph } = hero;
+  const { bigTitle, subTitle, tempValue, tempStatus, paragraph } = hero;
+
+  // 把"2026/05/26 · 星期二 · 盘前必读"压缩为"05/26 周二"
+  const compactDate = (() => {
+    const m = subTitle.match(/(\d{4})\/(\d{2})\/(\d{2}).*?星期([一二三四五六日])/);
+    if (m) return `${m[2]}/${m[3]} 周${m[4]}`;
+    return subTitle;
+  })();
+
+  // paragraph 里如果第一句包含"高开/低开/震荡/反弹"等预判词，加红 hook
+  const renderParagraph = (text: string) => {
+    const hookMatch = text.match(/^([^，。,.]{3,18})[，。,.]/);
+    if (hookMatch) {
+      const hook = hookMatch[1];
+      const rest = text.slice(hook.length);
+      return (
+        <>
+          <span className="font-bold" style={{ color: 'var(--red)' }}>
+            {hook}
+          </span>
+          {rest}
+        </>
+      );
+    }
+    return text;
+  };
 
   return (
-    <div className="hero-gradient relative overflow-hidden rounded-2xl px-5 pt-5 pb-5 text-white shadow-card">
-      {/* 顶部品牌 + 定制按钮 */}
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center">
-          <span className="gold-line-short" />
-          <span className="gold-text text-[10.5px] tracking-[0.32em] font-semibold ml-2">{brand}</span>
+    <div className="hero-light relative overflow-hidden rounded-2xl px-4 pt-4 pb-4 mt-1">
+      {/* 顶行：标题 + 日期 + 定制 */}
+      <div className="flex items-end justify-between mb-3">
+        <div className="flex items-baseline gap-2">
+          <h1
+            className="font-extrabold tracking-wide"
+            style={{ fontSize: 24, lineHeight: 1, color: 'var(--ink)' }}
+          >
+            {bigTitle}
+          </h1>
+          <span className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
+            {compactDate}
+          </span>
         </div>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex items-center gap-1 text-[12px] px-2.5 py-1 rounded-full"
+          className="px-2.5 py-1 rounded-full text-[11.5px]"
           style={{
-            color: '#E8C547',
-            border: '1px solid rgba(232, 197, 71, 0.55)',
-            background: 'rgba(232, 197, 71, 0.08)',
+            color: 'var(--red)',
+            border: '1px solid rgba(229,77,66,0.35)',
+            background: 'rgba(255,255,255,0.6)',
           }}
         >
-          <span className="text-[11px]">✦</span>
-          <span className="font-semibold">定制</span>
+          ✦ 定制
         </button>
       </div>
 
-      {/* 大标题 */}
-      <h1 className="gold-text text-[30px] leading-tight font-extrabold tracking-wide mt-1">
-        {bigTitle}
-      </h1>
-      <div className="text-[11px] text-white/65 mt-1 mb-4 tracking-wide">{subTitle}</div>
-
-      {/* 市场温度 */}
-      <div className="rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-3.5 mb-4">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center text-white/75 text-[12px]">
-            <span className="mr-1 text-[12px]" style={{ color: '#E8C547' }}>
-              ▴
+      {/* 温度卡 inline：数字 + 标签 + 渐变条 */}
+      <div className="flex items-center gap-3 mb-2.5">
+        <div className="shrink-0 flex items-end">
+          <span
+            className="font-extrabold leading-none"
+            style={{ fontSize: 38, color: 'var(--red)' }}
+          >
+            {tempValue}
+          </span>
+          <span
+            className="font-semibold leading-none ml-0.5 mb-1"
+            style={{ fontSize: 14, color: 'var(--red)' }}
+          >
+            °
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center mb-1.5">
+            <span className="text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
+              市场温度
             </span>
-            <span>{tempLabel}</span>
+            <span className="chip chip-info ml-2" style={{ padding: '1px 6px' }}>
+              {tempStatus}
+            </span>
           </div>
-          <div className="flex items-center text-[12px]" style={{ color: '#E8C547' }}>
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full mr-1.5"
-              style={{ background: '#E8C547' }}
-            />
-            <span className="font-semibold">{tempStatus}</span>
-          </div>
+          <div
+            className="h-[3px] w-full rounded-full"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(229,77,66,0.18) 0%, rgba(229,77,66,0.55) 50%, var(--red) 100%)',
+            }}
+          />
         </div>
-        <div className="flex items-end mt-1">
-          <span className="gold-text text-[42px] font-extrabold leading-none">{tempValue}</span>
-          <span className="gold-text text-[18px] font-semibold leading-none ml-0.5 mb-1.5">°</span>
-        </div>
-        {/* 渐变细线 */}
-        <div
-          className="mt-3 h-[3px] w-full rounded-full"
-          style={{
-            background:
-              'linear-gradient(90deg, #E54D42 0%, #F59E0B 35%, #E8C547 65%, #1FAE6F 100%)',
-            opacity: 0.85,
-          }}
-        />
       </div>
 
-      {/* 段落 */}
-      <p className="text-[13px] leading-[1.78] text-white/85">{paragraph}</p>
+      {/* 解读 */}
+      <p
+        className="m-0 font-medium"
+        style={{ fontSize: 13, lineHeight: 1.65, color: 'var(--ink)' }}
+      >
+        {renderParagraph(paragraph)}
+      </p>
     </div>
   );
 }

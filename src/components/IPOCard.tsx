@@ -1,96 +1,88 @@
-import type { IPOItem } from '../data/briefing';
 import { useBriefing } from '../data/BriefingContext';
+import { usePreferences } from '../data/usePreferences';
 
-function BoardChip({ board, color }: { board: string; color: 'green' | 'blue' }) {
-  // 截图里两个 chip 都是橙黄色描边，不分颜色——但 boardColor 字段保留
-  const palette =
-    color === 'green'
-      ? { c: '#B45309', bg: '#FEF6E7', bd: '#F0C067' }
-      : { c: '#B45309', bg: '#FEF6E7', bd: '#F0C067' };
-  return (
-    <span
-      className="text-[10.5px] px-1.5 py-0.5 rounded border ml-1.5 font-semibold"
-      style={{ color: palette.c, background: palette.bg, borderColor: palette.bd }}
-    >
-      {board}
-    </span>
-  );
-}
-
-function StatCell({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
-  return (
-    <div className="rounded-lg px-2.5 py-2.5" style={{ background: '#F5F5F7' }}>
-      <div className="text-[11px] text-gray-500">{label}</div>
-      <div className="text-[13.5px] font-bold mt-0.5" style={{ color: valueColor || '#1f1f23' }}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function IPOItemView({ item }: { item: IPOItem }) {
-  return (
-    <div className="rounded-xl border border-[#F0F0F2] p-3 mb-3 last:mb-0" style={{ background: '#FBFBFC' }}>
-      <div className="flex items-center mb-3">
-        <span className="text-[15px] font-bold text-[#1f1f23]">{item.name}</span>
-        <span className="text-[12px] text-gray-400 ml-1.5">{item.code}</span>
-        <BoardChip board={item.board} color={item.boardColor} />
-      </div>
-
-      {/* 三栏：发行价 / 所属行业 / 预估收益 */}
-      <div className="grid grid-cols-3 gap-2">
-        <StatCell label="发行价" value={item.price} />
-        <StatCell label="所属行业" value={item.industry} />
-        <div className="rounded-lg px-2.5 py-2.5" style={{ background: '#F5F5F7' }}>
-          <div className="text-[11px] text-gray-500">预估收益</div>
-          <div className="text-[13.5px] font-bold mt-0.5" style={{ color: '#E54D42' }}>
-            {item.estProfit}{' '}
-            <span className="text-[11.5px] font-semibold">{item.estPct}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 看点 */}
-      <div className="mt-3 flex items-start">
-        <span className="shrink-0 text-[12px] text-gray-500 mr-1">看点 ·</span>
-        <p className="text-[12.5px] leading-[1.7] text-[#333]">{item.highlight}</p>
-      </div>
-    </div>
-  );
-}
-
+/**
+ * 打新极简版
+ * - 每只：名 + 代码 + 加自选 chip / 发行价 · 预估收益（金额）/ 看点
+ * - 末尾红色"一键申购全部新股"按钮
+ * - 去板块色 chip（创业板/科创板），换成"+ 加自选"操作 chip
+ */
 export default function IPOCard() {
   const { ipo } = useBriefing();
-  const { list: ipoList, footerNote: ipoFooterNote, btnText: ipoBtnText } = ipo;
+  const { addWatch } = usePreferences();
 
-  // 未来 7 天没有新股可申购时，整个模块隐藏
-  if (!ipoList || ipoList.length === 0) {
-    return null;
-  }
+  if (!ipo || !ipo.list || ipo.list.length === 0) return null;
+
+  const handleAdd = (name: string, code: string) => {
+    // code 是不带前缀的，按 sh/sz 推断
+    const prefix = code.startsWith('6') || code.startsWith('9') ? 'sh' : 'sz';
+    addWatch({ name, code: `${prefix}${code}` });
+  };
 
   return (
-    <div className="bg-white rounded-2xl shadow-card p-4 mb-3">
-      <div className="flex items-center mb-3">
-        <span className="text-[16px] mr-1.5">💰</span>
-        <span className="text-[15px] font-bold text-[#1f1f23]">今日打新</span>
+    <div className="mb-3">
+      <div className="font-bold mb-2 text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
+        今日打新（{ipo.list.length} 只）
       </div>
-
-      {ipoList.map((item) => (
-        <IPOItemView key={item.code} item={item} />
-      ))}
-
-      <button
-        type="button"
-        className="w-full mt-1 rounded-xl text-white text-[14.5px] font-semibold py-3 flex items-center justify-center"
-        style={{
-          background: 'linear-gradient(180deg, #E54D42 0%, #B91C1C 100%)',
-          boxShadow: '0 4px 12px rgba(229, 77, 66, 0.25)',
-        }}
-        // TODO: 一键申购弹窗
-      >
-        {ipoBtnText}
-      </button>
-      <div className="text-center text-[11.5px] text-gray-500 mt-2">{ipoFooterNote}</div>
+      <div className="space-y-2">
+        {ipo.list.map((p) => (
+          <div
+            key={p.code}
+            className="rounded-lg p-2.5"
+            style={{ background: 'var(--surface)' }}
+          >
+            <div className="flex items-center mb-1">
+              <span className="font-bold text-[14px]">{p.name}</span>
+              <span
+                className="ml-1.5 text-[11.5px]"
+                style={{ color: 'var(--ink-3)' }}
+              >
+                {p.code}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleAdd(p.name, p.code)}
+                className="ml-auto chip chip-info"
+              >
+                + 加自选
+              </button>
+            </div>
+            <div
+              className="flex items-center mb-1.5 gap-3 tabular-nums text-[11.5px]"
+              style={{ color: 'var(--ink-2)' }}
+            >
+              <span>
+                发行价 <b style={{ color: 'var(--ink)' }}>{p.price}</b>
+              </span>
+              <span style={{ color: 'var(--ink-3)' }}>·</span>
+              <span>
+                预估收益 <b style={{ color: 'var(--red)' }}>{p.estProfit}</b>
+              </span>
+            </div>
+            <div
+              className="text-[13px]"
+              style={{ lineHeight: 1.6, color: 'var(--ink-2)' }}
+            >
+              <span className="font-semibold" style={{ color: 'var(--red)' }}>
+                看点·
+              </span>
+              {p.highlight}
+            </div>
+          </div>
+        ))}
+        {/* 一键申购 */}
+        <button
+          type="button"
+          className="w-full mt-1 py-2.5 rounded-lg font-semibold flex items-center justify-center text-[13px]"
+          style={{
+            background: 'var(--red)',
+            color: '#fff',
+            boxShadow: '0 2px 8px rgba(229,77,66,0.20)',
+          }}
+        >
+          一键申购全部新股（{ipo.list.length} 只）<span className="ml-1">→</span>
+        </button>
+      </div>
     </div>
   );
 }
